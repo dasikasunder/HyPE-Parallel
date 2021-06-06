@@ -141,3 +141,26 @@ PetscReal ViscRiemannSolver(const PetscReal* QL, PetscReal grad_QL[nVar][DIM],
 
     return s_max;
 }
+
+//----------------------------------------------------------------------------
+// Viscous Riemann Solver (Does average of the two fluxes)
+//----------------------------------------------------------------------------
+
+PetscReal ViscRiemannSolverPrim(const PetscReal* VL, PetscReal grad_VL[nVar][DIM],
+                               const PetscReal* VR, PetscReal grad_VR[nVar][DIM],
+                               const PetscReal nx, const PetscReal ny,
+                               PetscReal* Flux) {
+
+    PetscReal FL[nVar], FR[nVar];
+    PetscInt c;
+
+    PetscReal s_max_l = PDEViscFluxPrim(VL, grad_VL, nx, ny, FL);
+    PetscReal s_max_r = PDEViscFluxPrim(VR, grad_VR, nx, ny, FR);
+
+    PetscReal s_max = PetscMax(s_max_l, s_max_r);
+
+    for (c = 0; c < nVar; ++c)
+        Flux[c] = 0.5*(FR[c] + FL[c]);
+
+    return s_max;
+}
