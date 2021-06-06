@@ -87,7 +87,7 @@ PetscReal PDEFlux(const PetscReal *Q,
 // Find the Viscous flux in the normal direction F_v.n
 //----------------------------------------------------------------------------
 
-PetscReal PDEViscFlux(const PetscReal* Q, PetscReal grad_Q[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
+PetscReal PDEViscFlux(const PetscReal* Q, const PetscReal grad_Q[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
 
     const PetscReal r2_3 = 2./3;
     const PetscReal r4_3 = 4./3;
@@ -233,6 +233,42 @@ PetscReal PDEFluxPrim(const PetscReal *V,
     PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(GAMMA_1*p/rho);
 
     return s_max;
+}
+
+//----------------------------------------------------------------------------
+// Viscous part of the flux in the normal direction
+//----------------------------------------------------------------------------
+
+PetscReal PDEViscFluxPrim(const PetscReal* V, const PetscReal grad_V[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
+
+    PetscReal r2_3 = 2./3.; PetscReal r4_3 = 4./3.;
+
+
+    // viscosity
+
+    PetscReal mu = MU_1;
+
+    PetscReal u = V[1];
+    PetscReal v = V[2];
+    PetscReal u_x = grad_V[1][0];
+    PetscReal u_y = grad_V[1][1];
+    PetscReal v_x = grad_V[2][0];
+    PetscReal v_y = grad_V[2][1];
+    PetscReal div_v = u_x + v_y;
+
+    // Stress tensor
+
+    PetscReal tau_xx = mu*(2.0*u_x - r2_3*div_v);
+    PetscReal tau_xy = mu*(u_y + v_x) ;
+    PetscReal tau_yy = mu*(2.0*v_y - r2_3*div_v);
+
+    F[0] = 0.0;
+    F[1] = -nx*tau_xx - ny*tau_xy;
+    F[2] = -nx*tau_xy - ny*tau_yy;
+    F[3] = -nx*(u*tau_xx + v*tau_xy) - ny*(u*tau_xy + v*tau_yy);
+    F[4] = 0.0;
+
+    return r4_3*mu/V[0];
 }
 
 //----------------------------------------------------------------------------

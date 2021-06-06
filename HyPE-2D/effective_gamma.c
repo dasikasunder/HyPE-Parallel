@@ -96,6 +96,48 @@ PetscReal PDEFlux(const PetscReal *Q,
 }
 
 //----------------------------------------------------------------------------
+// Viscous part of the flux in the normal direction
+//----------------------------------------------------------------------------
+
+PetscReal PDEViscFlux(const PetscReal* Q, const PetscReal grad_Q[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
+
+    PetscReal r2_3 = 2./3.; PetscReal r4_3 = 4./3.;
+
+    // Find the phase fractions
+
+    PetscReal phi = Q[4];
+
+    // Effective viscosity
+
+    PetscReal mu = phi*MU1 + (1.0-phi)*MU2;
+
+
+    PetscReal irho = 1.0/Q[0];
+
+    PetscReal u = irho*Q[1];
+    PetscReal v = irho*Q[2];
+    PetscReal u_x = irho*(grad_Q[1][0] - u*grad_Q[0][0]);
+    PetscReal u_y = irho*(grad_Q[1][1] - u*grad_Q[0][1]);
+    PetscReal v_x = irho*(grad_Q[2][0] - v*grad_Q[0][0]);
+    PetscReal v_y = irho*(grad_Q[2][1] - v*grad_Q[0][1]);
+    PetscReal div_v = u_x + v_y;
+
+        // Stress tensor
+
+    PetscReal tau_xx = mu*(2.0*u_x - r2_3*div_v);
+    PetscReal tau_xy = mu*(u_y + v_x) ;
+    PetscReal tau_yy = mu*(2.0*v_y - r2_3*div_v);
+
+    F[0] = 0.0;
+    F[1] = -nx*tau_xx - ny*tau_xy;
+    F[2] = -nx*tau_xy - ny*tau_yy;
+    F[3] = -nx*(u*tau_xx + v*tau_xy) - ny*(u*tau_xy + v*tau_yy);
+    F[4] = 0.0;
+
+    return r4_3*mu*irho;
+}
+
+//----------------------------------------------------------------------------
 // Non-conservative product BgradQ
 //----------------------------------------------------------------------------
 
@@ -211,6 +253,45 @@ PetscReal PDEFluxPrim(const PetscReal *V,
     PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(g*(p + P_inf)/rho);
 
     return s_max;
+}
+
+//----------------------------------------------------------------------------
+// Viscous part of the flux in the normal direction
+//----------------------------------------------------------------------------
+
+PetscReal PDEViscFluxPrim(const PetscReal* V, const PetscReal grad_V[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
+
+    PetscReal r2_3 = 2./3.; PetscReal r4_3 = 4./3.;
+
+    // Find the phase fractions
+
+    PetscReal phi = V[4];
+
+    // Effective viscosity
+
+    PetscReal mu = phi*MU1 + (1.0-phi)*MU2;
+
+    PetscReal u = V[1];
+    PetscReal v = V[2];
+    PetscReal u_x = grad_V[1][0];
+    PetscReal u_y = grad_V[1][1];
+    PetscReal v_x = grad_V[2][0];
+    PetscReal v_y = grad_V[2][1];
+    PetscReal div_v = u_x + v_y;
+
+    // Stress tensor
+
+    PetscReal tau_xx = mu*(2.0*u_x - r2_3*div_v);
+    PetscReal tau_xy = mu*(u_y + v_x) ;
+    PetscReal tau_yy = mu*(2.0*v_y - r2_3*div_v);
+
+    F[0] = 0.0;
+    F[1] = -nx*tau_xx - ny*tau_xy;
+    F[2] = -nx*tau_xy - ny*tau_yy;
+    F[3] = -nx*(u*tau_xx + v*tau_xy) - ny*(u*tau_xy + v*tau_yy);
+    F[4] = 0.0;
+
+    return r4_3*mu/V[0];
 }
 
 //----------------------------------------------------------------------------

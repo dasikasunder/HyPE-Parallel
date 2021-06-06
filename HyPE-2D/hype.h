@@ -267,7 +267,7 @@ void PDEPrim2Cons(const PetscReal*, PetscReal*);
 /* Input variables are conserved variables */
 
 PetscReal PDEFlux(const PetscReal*, const PetscReal, const PetscReal, const PetscReal,  const PetscReal, PetscReal*);
-PetscReal PDEViscFlux(const PetscReal*, PetscReal grad_Q[nVar][DIM], PetscReal, PetscReal, PetscReal*);
+PetscReal PDEViscFlux(const PetscReal*, const PetscReal grad_Q[nVar][DIM], PetscReal, PetscReal, PetscReal*);
 void PDENCP(const PetscReal*, const PetscReal*, const PetscReal*, PetscReal*);
 void PDEmatrixB(const PetscReal*, PetscReal, PetscReal, PetscReal B[nVar][nVar]);
 PetscBool PDECheckPAD(const PetscReal*);
@@ -281,7 +281,7 @@ PetscReal ViscRiemannSolver(const PetscReal*, PetscReal grad_QL[nVar][DIM],
 /* Input variables are primitive variables */
 
 PetscReal PDEFluxPrim(const PetscReal*, const PetscReal, const PetscReal, const PetscReal,  const PetscReal, PetscReal*);
-PetscReal PDEViscFluxPrim(const PetscReal*, PetscReal grad_Q[nVar][DIM], PetscReal, PetscReal, PetscReal*);
+PetscReal PDEViscFluxPrim(const PetscReal*, const PetscReal grad_V[nVar][DIM], PetscReal, PetscReal, PetscReal*);
 void PDENCPPrim(const PetscReal*, const PetscReal*, const PetscReal*, PetscReal*);
 PetscBool PDECheckPADPrim(const PetscReal*);
 

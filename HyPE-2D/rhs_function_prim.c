@@ -52,6 +52,12 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
     ierr = DMDAGetCorners(da, &xs, &ys, NULL, &xm, &ym, NULL);CHKERRQ(ierr);
     ierr = DMDAGetGhostCorners(da, &xs_g, &ys_g, NULL, &xm_g, &ym_g, NULL);CHKERRQ(ierr);
 
+#ifdef VISCOUS
+    PetscInt iDim;
+    PetscReal s_v, grad_VL[nVar][DIM]; PetscReal grad_VR[nVar][DIM], s_max_v = 0.0;
+    PetscReal Flux_visc[nVar];
+#endif
+
     // Allocate memory
 
     Malloc1D(&coeffs,Ctx->nDOF);
@@ -277,6 +283,28 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 w_xy_loc[4] = w[j-1][i-1].comp[c];
                 
                 Reconstruct(w_x_loc, w_y_loc, w_xy_loc, Ctx->N, coeffs, u_coeffs);
+
+#ifdef VISCOUS
+                // Calculate boundary extrpolated gradients
+
+                for (f = 0; f < 4; ++f) {
+
+                    for (q = 0; q < Ctx->Ngp_Face; ++q) {
+
+                        grad_x = 0.0; grad_y = 0.0;
+
+                        for (k = 0; k < Ctx->nDOF; ++k) {
+                            grad_x += u_coeffs[k]*get_element_3d(Ctx->gradphiFace_x,f,q,k);
+                            grad_y += u_coeffs[k]*get_element_3d(Ctx->gradphiFace_y,f,q,k);
+                        }
+
+                        grad_x = r1_h*grad_x; grad_y = r1_h*grad_y;
+
+                        set_element_6d(Ctx->u_bnd_grad, local_j, local_i, c, f, q, 0, grad_x);
+                        set_element_6d(Ctx->u_bnd_grad, local_j, local_i, c, f, q, 1, grad_y);
+                    }
+                }
+#endif
                 
                 // Store the coefficients 
                 
@@ -410,13 +438,25 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 for (c = 0; c < nVar; ++c) {
                     VL[c] = get_element_5d(Ctx->u_bnd, local_j, local_i-1, c, 1, q);
                     VR[c] = get_element_5d(Ctx->u_bnd, local_j, local_i,   c, 0, q);
+#ifdef VISCOUS
+                    for (iDim = 0; iDim < DIM; ++iDim) {
+                        grad_VL[c][iDim] = get_element_6d(Ctx->u_bnd_grad, local_j, local_i-1, c, 1, q, iDim);
+                        grad_VR[c][iDim] = get_element_6d(Ctx->u_bnd_grad, local_j, local_i,   c, 0, q, iDim);
+                    }
+#endif
                 }
                 
                 s_c = RiemannSolverPrim(VL, VR, nx, ny, x_loc, y_loc, Flux_conv, Fluc); if (s_c>s_max_c) s_max_c = s_c;
+#ifdef VISCOUS
+                s_v = ViscRiemannSolverPrim(VL, grad_VL, VR, grad_VR, nx, ny, Flux_visc);  if (s_v>s_max_v) s_max_v = s_v;
+#endif
                 
                 for (c = 0; c < nVar; ++c) {
                     Flux[c] += Ctx->wGP_Face[q]*Flux_conv[c];
                     NCP[c]  += Ctx->wGP_Face[q]*Fluc[c];
+#ifdef VISCOUS
+                    Flux[c] += Ctx->wGP_Face[q]*Flux_visc[c];
+#endif
                 }
             }
         
@@ -450,13 +490,25 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 for (c = 0; c < nVar; ++c) {
                     VL[c] = get_element_5d(Ctx->u_bnd, local_j-1, local_i, c, 3, q);
                     VR[c] = get_element_5d(Ctx->u_bnd, local_j,   local_i, c, 2, q);
+#ifdef VISCOUS
+                    for (iDim = 0; iDim < DIM; ++iDim) {
+                        grad_VL[c][iDim] = get_element_6d(Ctx->u_bnd_grad, local_j-1, local_i, c, 3, q, iDim);
+                        grad_VR[c][iDim] = get_element_6d(Ctx->u_bnd_grad, local_j,   local_i, c, 2, q, iDim);
+                    }
+#endif
                 }
                 
                 s_c = RiemannSolverPrim(VL, VR, nx, ny, x_loc, y_loc, Flux_conv, Fluc); if (s_c>s_max_c) s_max_c = s_c;
+#ifdef VISCOUS
+                s_v = ViscRiemannSolverPrim(VL, grad_VL, VR, grad_VR, nx, ny, Flux_visc);  if (s_v>s_max_v) s_max_v = s_v;
+#endif
                 
                 for (c = 0; c < nVar; ++c) {
                     Flux[c] += Ctx->wGP_Face[q]*Flux_conv[c];
                     NCP[c]  += Ctx->wGP_Face[q]*Fluc[c];
+#ifdef VISCOUS
+                    Flux[c] += Ctx->wGP_Face[q]*Flux_visc[c];
+#endif
                 }
             }
             
@@ -497,7 +549,11 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
     ierr = DMDAVecRestoreArray(da,Ctx->localU,&w);CHKERRQ(ierr);
     ierr = DMDAVecRestoreArray(da,RHS,&rhs);CHKERRQ(ierr);
 
-    dt = (Ctx->CFL*Ctx->h)/(2.0*s_max_c); // 2.0 corresponds to 2 dimensions 
+#ifdef VISCOUS
+     dt = (Ctx->CFL*Ctx->h)/( 2.0*(s_max_c + (r1_h*s_max_v)*2.0) ); // Outer 2.0 corresponds to two dimensions
+#else
+    dt = (Ctx->CFL*Ctx->h)/(2.0*s_max_c); // 2.0 corresponds to 2 dimensions
+#endif
 
     ierr = MPI_Allreduce(&dt, &Ctx->dt, 1, MPIU_REAL,MPIU_MIN, PetscObjectComm((PetscObject)da));CHKERRQ(ierr);
 
