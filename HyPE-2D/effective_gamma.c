@@ -109,7 +109,7 @@ PetscReal PDEViscFlux(const PetscReal* Q, const PetscReal grad_Q[nVar][DIM], Pet
 
     // Effective viscosity
 
-    PetscReal mu = phi*MU1 + (1.0-phi)*MU2;
+    PetscReal mu = phi*MU_1 + (1.0-phi)*MU_2;
 
 
     PetscReal irho = 1.0/Q[0];
@@ -207,6 +207,44 @@ PetscBool PDECheckPAD(const PetscReal *Q) {
 }
 
 //----------------------------------------------------------------------------
+// Inlet boundary conditions (in conservative form)
+//----------------------------------------------------------------------------
+
+void InletBC(PetscReal x, PetscReal y, PetscReal t, PetscReal* Q) {
+    const PetscReal M = 2.0;
+    const PetscReal rho_air = 1.0;
+    const PetscReal rho_water = 1000.0;
+    const PetscReal P = 1.013;
+    const PetscReal U_avg = M*PetscSqrtReal(GAMMA_2*P/rho_air);
+    const PetscReal phi_R = 1.0 - 1.0e-6;
+    const PetscReal phi_L = 1.0e-6;
+    const PetscReal PHI = 0.5*( phi_R + phi_L );
+    const PetscReal dif_phi = (phi_L - phi_R)/2.0;
+    const PetscReal h = 30.0/500.0;
+    const PetscReal epsilon = 3.0*h;
+    const PetscReal r_0 = 1.0;
+    PetscReal V[nVar];
+    PetscReal r;
+
+    r = PetscAbsReal(y);
+
+    if (r < 1.0) {
+        V[0] = rho_water;
+        V[1] = 2.0*U_avg*(1.0 - y*y);
+    }
+    else {
+        V[0] = rho_water;
+        V[1] = 0.0;
+    }
+
+    V[2] = 0.0;
+    V[3] = P;
+    V[4] = PHI + dif_phi*PetscTanhReal(-(r-r_0)/epsilon);
+
+    PDEPrim2Cons(V,Q);
+}
+
+//----------------------------------------------------------------------------
 // Conservative flux components F in the given normal direction
 //----------------------------------------------------------------------------
 
@@ -269,7 +307,7 @@ PetscReal PDEViscFluxPrim(const PetscReal* V, const PetscReal grad_V[nVar][DIM],
 
     // Effective viscosity
 
-    PetscReal mu = phi*MU1 + (1.0-phi)*MU2;
+    PetscReal mu = phi*MU_1 + (1.0-phi)*MU_2;
 
     PetscReal u = V[1];
     PetscReal v = V[2];
@@ -341,6 +379,66 @@ PetscBool PDECheckPADPrim(const PetscReal *V) {
     }
 
     return PAD;
+}
+
+//----------------------------------------------------------------------------
+// Inlet boundary conditions (in primitive form)
+//----------------------------------------------------------------------------
+
+void InletBCPrim(PetscReal x, PetscReal y, PetscReal t, PetscReal* V) {
+    const PetscReal M = 2.0;
+    const PetscReal rho_air = 1.0;
+    const PetscReal rho_water = 1000.0;
+    const PetscReal P = 1.013;
+    const PetscReal U_avg = M*PetscSqrtReal(GAMMA_2*P/rho_air);
+    const PetscReal phi_R = 1.0 - 1.0e-6;
+    const PetscReal phi_L = 1.0e-6;
+    const PetscReal PHI = 0.5*( phi_R + phi_L );
+    const PetscReal dif_phi = (phi_L - phi_R)/2.0;
+    const PetscReal h = 30.0/500.0;
+    const PetscReal epsilon = 3.0*h;
+    const PetscReal r_0 = 1.0;
+    PetscReal r;
+
+    r = PetscAbsReal(y);
+
+    if (r < 1.0) {
+        V[0] = rho_water;
+        V[1] = 2.0*U_avg*(1.0 - y*y);
+    }
+    else {
+        V[0] = rho_water;
+        V[1] = 0.0;
+    }
+
+    V[2] = 0.0;
+    V[3] = P;
+    V[4] = PHI + dif_phi*PetscTanhReal(-(r-r_0)/epsilon);
+}
+
+//---------------------------------------------------------------------------------------------------------------------------------------
+// Test cases
+//---------------------------------------------------------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------
+// Air-Jet Entering water reservoir
+// [x,y] \in [0,30] x [-15,15]
+// Final Time: 1000.0
+// BC: L-I, R-T, B-R, T-R
+// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_2 = 0.0
+//----------------------------------------------------------------------------
+
+void AirJet_EG(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    V0[0] = 1000.0;
+    V0[1] = 0.0;
+    V0[2] = 0.0;
+    V0[3] = 1.013;
+    V0[4] = 1.0 - 1.0e-6;
+
+    PDEPrim2Cons(V0, Q0);
 }
 
 # endif

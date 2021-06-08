@@ -30,18 +30,18 @@
 // Various constants used throught the code 
 //----------------------------------------------------------------------------
 
-# define EULER
-# define VISCOUS
-# define nVar 4      /* Number of components in the PDE system */
+# define KAPILA_5EQN
+//# define VISCOUS
+# define nVar 6      /* Number of components in the PDE system */
 # define DIM 2       /* Dimensions of the problem */
 
 // Physical Constants 
 
-static const PetscReal GAMMA_1  = 1.4;      /* Specific heat ratio of first phase */
-static const PetscReal GAMMA_2  = 1.648;    /* Specific heat ratio of second phase */
-static const PetscReal PI_1     = 0.0;      /* Stiffness constant of first phase */
+static const PetscReal GAMMA_1  = 4.4;      /* Specific heat ratio of first phase */
+static const PetscReal GAMMA_2  = 1.4;      /* Specific heat ratio of second phase */
+static const PetscReal PI_1     = 6000.0;   /* Stiffness constant of first phase */
 static const PetscReal PI_2     = 0.0;      /* Stiffness constant of second phase */
-static const PetscReal MU_1     = 0.005;    /* Viscosity of first phase */
+static const PetscReal MU_1     = 1.0e-2;   /* Viscosity of first phase */
 static const PetscReal MU_2     = 0.0;      /* Viscosity of second phase */
 static const PetscReal G_A      = 9.8;      /* Accelaration due to gravity */
 
@@ -71,7 +71,7 @@ typedef struct {
 // Various types of boundary conditions 
 //----------------------------------------------------------------------------
 
-enum bndry_type{wall, inflow, periodic, reflective, transmissive};
+enum bndry_type{wall, inlet, periodic, reflective, transmissive};
 
 //----------------------------------------------------------------------------
 // Output file formats
@@ -222,10 +222,10 @@ typedef struct {
     PetscInt WriteInterval;           /* No. of time steps after which data should be written */
     PetscInt RestartInterval;         /* No. of time steps after which restart file should be written */
     PetscBool ReconsPrimitive;        /* Flag to reconstruct primitive or conserved variables */
-    enum bndry_type left_boundary;    /* Boundary condition on the left face */
-    enum bndry_type right_boundary;   /* Boundary condition on the right face */
-    enum bndry_type top_boundary;     /* Boundary condition on the top face */
-    enum bndry_type bottom_boundary;  /* Boundary condition on the bottom face */
+    enum bndry_type LeftBoundary;    /* Boundary condition on the left face */
+    enum bndry_type RightBoundary;   /* Boundary condition on the right face */
+    enum bndry_type TopBoundary;     /* Boundary condition on the top face */
+    enum bndry_type BottomBoundary;  /* Boundary condition on the bottom face */
     enum output_format OutFormat;     /* Whether to output data in vts, vtk format */
     PetscInt N;                       /* Degree of approximation (0,1,2,3) */
     PetscInt nDOF;                    /* Number of degrees of freedom per variable */
@@ -271,6 +271,7 @@ PetscReal PDEViscFlux(const PetscReal*, const PetscReal grad_Q[nVar][DIM], Petsc
 void PDENCP(const PetscReal*, const PetscReal*, const PetscReal*, PetscReal*);
 void PDEmatrixB(const PetscReal*, PetscReal, PetscReal, PetscReal B[nVar][nVar]);
 PetscBool PDECheckPAD(const PetscReal*);
+void InletBC(PetscReal,PetscReal,PetscReal,PetscReal*);
 
 PetscReal RiemannSolver(const PetscReal*, const PetscReal*, const PetscReal, const PetscReal, const PetscReal,  const PetscReal, PetscReal*, PetscReal*);
 PetscReal ViscRiemannSolver(const PetscReal*, PetscReal grad_QL[nVar][DIM],
@@ -290,6 +291,7 @@ PetscReal ViscRiemannSolverPrim(const PetscReal*, PetscReal grad_QL[nVar][DIM],
                                 const PetscReal*, PetscReal grad_QR[nVar][DIM],
                                 const PetscReal, const PetscReal,
                                 PetscReal*);
+void InletBCPrim(PetscReal,PetscReal,PetscReal,PetscReal*);
 
 //----------------------------------------------------------------------------
 // WENO reconstruction 
@@ -319,14 +321,20 @@ PetscErrorCode ComputePrimitiveVariables(Vec, Vec, DM);
 
 /* Euler's / Navier-Stokes equations */
 
+void LidDrivenCavity_NS(PetscReal, PetscReal, PetscReal*);
 void ViscousShockTube_NS(PetscReal, PetscReal, PetscReal*);
 
-/* Kapila EQN Model */
+/* Kapila 5-EQN Model */
 
 void smooth_vortex_kp5(PetscReal, PetscReal, PetscReal*);
 void interface_advection_kp5(PetscReal, PetscReal, PetscReal*);
 void air_helium_kp5(PetscReal, PetscReal, PetscReal*);
 void water_air_kp5(PetscReal, PetscReal, PetscReal*);
+void AirJet_KP5(PetscReal, PetscReal, PetscReal*);
+
+/* Effective-Gamma Model */
+
+void AirJet_EG(PetscReal, PetscReal, PetscReal*);
 
 /* Diffuse Interface Model */
 

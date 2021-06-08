@@ -113,6 +113,51 @@ PetscReal PDEFlux(const PetscReal *Q,
 }
 
 //----------------------------------------------------------------------------
+// Viscous part of the flux in the normal direction
+//----------------------------------------------------------------------------
+
+PetscReal PDEViscFlux(const PetscReal* Q, const PetscReal grad_Q[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
+
+    PetscReal r2_3 = 2./3.; PetscReal r4_3 = 4./3.;
+
+    // Find the phase fractions
+
+    PetscReal phi = Q[5];
+
+    // Effective viscosity
+
+    PetscReal mu = phi*MU_1 + (1.0-phi)*MU_2;
+
+    PetscReal irho = 1.0/(Q[0] + Q[1]);
+
+
+    PetscReal u = irho*Q[2];
+    PetscReal v = irho*Q[3];
+    PetscReal rho_x = grad_Q[0][0] + grad_Q[1][0];
+    PetscReal rho_y = grad_Q[0][1] + grad_Q[1][1];
+    PetscReal u_x = irho*(grad_Q[2][0] - u*rho_x);
+    PetscReal u_y = irho*(grad_Q[2][1] - u*rho_y);
+    PetscReal v_x = irho*(grad_Q[3][0] - v*rho_x);
+    PetscReal v_y = irho*(grad_Q[3][1] - v*rho_y);
+    PetscReal div_v = u_x + v_y;
+
+        // Stress tensor
+
+    PetscReal tau_xx = mu*(2.0*u_x - r2_3*div_v);
+    PetscReal tau_xy = mu*(u_y + v_x) ;
+    PetscReal tau_yy = mu*(2.0*v_y - r2_3*div_v);
+
+    F[0] = 0.0;
+    F[1] = 0.0;
+    F[2] = -nx*tau_xx - ny*tau_xy;
+    F[3] = -nx*tau_xy - ny*tau_yy;
+    F[4] = -nx*(u*tau_xx + v*tau_xy) - ny*(u*tau_xy + v*tau_yy);
+    F[5] = 0.0;
+
+    return r4_3*mu*irho;
+}
+
+//----------------------------------------------------------------------------
 // Non-conservative product BgradQ
 //----------------------------------------------------------------------------
 
@@ -233,6 +278,43 @@ PetscBool PDECheckPAD(const PetscReal *Q) {
 }
 
 //----------------------------------------------------------------------------
+// Inlet boundary conditions (in conservative form)
+//----------------------------------------------------------------------------
+
+void InletBC(PetscReal x, PetscReal y, PetscReal t, PetscReal* Q) {
+    const PetscReal M = 2.0;
+    const PetscReal rho_air = 1.0;
+    const PetscReal rho_water = 1000.0;
+    const PetscReal P = 1.013;
+    const PetscReal U_avg = M*PetscSqrtReal(GAMMA_2*P/rho_air);
+    const PetscReal phi_R = 1.0 - 1.0e-6;
+    const PetscReal phi_L = 1.0e-6;
+    const PetscReal PHI = 0.5*( phi_R + phi_L );
+    const PetscReal dif_phi = (phi_L - phi_R)/2.0;
+    const PetscReal h = 30.0/500.0;
+    const PetscReal epsilon = 3.0*h;
+    const PetscReal r_0 = 1.0;
+    PetscReal V[nVar];
+    PetscReal r;
+
+    r = PetscAbsReal(y);
+
+    V[0] = rho_water;
+    V[1] = rho_air;
+
+    if (r < 1.0)
+        V[2] = 2.0*U_avg*(1.0 - y*y);
+    else
+        V[2] = 0.0;
+
+    V[3] = 0.0;
+    V[4] = P;
+    V[5] = PHI + dif_phi*PetscTanhReal(-(r-r_0)/epsilon);
+
+    PDEPrim2Cons(V,Q);
+}
+
+//----------------------------------------------------------------------------
 // Conservative flux components F in the given normal direction
 //----------------------------------------------------------------------------
 
@@ -286,6 +368,46 @@ PetscReal PDEFluxPrim(const PetscReal *V,
     PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(gamma*(p+pi)*irho);
 
     return s_max;
+}
+
+//----------------------------------------------------------------------------
+// Viscous part of the flux in the normal direction
+//----------------------------------------------------------------------------
+
+PetscReal PDEViscFluxPrim(const PetscReal* V, const PetscReal grad_V[nVar][DIM], PetscReal nx, PetscReal ny, PetscReal* F) {
+
+    PetscReal r2_3 = 2./3.; PetscReal r4_3 = 4./3.;
+
+    // Find the phase fractions
+
+    PetscReal phi = V[5];
+
+    // Effective viscosity
+
+    PetscReal mu = phi*MU_1 + (1.0-phi)*MU_2;
+
+    PetscReal u = V[2];
+    PetscReal v = V[3];
+    PetscReal u_x = grad_V[2][0];
+    PetscReal u_y = grad_V[2][1];
+    PetscReal v_x = grad_V[3][0];
+    PetscReal v_y = grad_V[3][1];
+    PetscReal div_v = u_x + v_y;
+
+    // Stress tensor
+
+    PetscReal tau_xx = mu*(2.0*u_x - r2_3*div_v);
+    PetscReal tau_xy = mu*(u_y + v_x) ;
+    PetscReal tau_yy = mu*(2.0*v_y - r2_3*div_v);
+
+    F[0] = 0.0;
+    F[1] = 0.0;
+    F[2] = -nx*tau_xx - ny*tau_xy;
+    F[3] = -nx*tau_xy - ny*tau_yy;
+    F[4] = -nx*(u*tau_xx + v*tau_xy) - ny*(u*tau_xy + v*tau_yy);
+    F[5] = 0.0;
+
+    return r4_3*mu/V[0];
 }
 
 //----------------------------------------------------------------------------
@@ -361,7 +483,39 @@ PetscBool PDECheckPADPrim(const PetscReal *V) {
     return PAD;
 }
 
-# endif
+//----------------------------------------------------------------------------
+// Inlet boundary conditions (in primitive form)
+//----------------------------------------------------------------------------
+
+void InletBCPrim(PetscReal x, PetscReal y, PetscReal t, PetscReal* V) {
+    const PetscReal M = 2.0;
+    const PetscReal rho_air = 1.0;
+    const PetscReal rho_water = 1000.0;
+    const PetscReal P = 1.013;
+    const PetscReal U_avg = M*PetscSqrtReal(GAMMA_2*P/rho_air);
+    const PetscReal phi_R = 1.0 - 1.0e-6;
+    const PetscReal phi_L = 1.0e-6;
+    const PetscReal PHI = 0.5*( phi_R + phi_L );
+    const PetscReal dif_phi = (phi_L - phi_R)/2.0;
+    const PetscReal h = 30.0/500.0;
+    const PetscReal epsilon = 3.0*h;
+    const PetscReal r_0 = 1.0;
+    PetscReal r;
+
+    r = PetscAbsReal(y);
+
+    V[0] = rho_water;
+    V[1] = rho_air;
+
+    if (r < 1.0)
+        V[2] = 2.0*U_avg*(1.0 - y*y);
+    else
+        V[2] = 0.0;
+
+    V[3] = 0.0;
+    V[4] = P;
+    V[5] = PHI + dif_phi*PetscTanhReal(-(r-r_0)/epsilon);
+}
 
 //---------------------------------------------------------------------------------------------------------------------------------------
 // Test cases
@@ -535,3 +689,29 @@ void water_air_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PDEPrim2Cons(V0, Q0);
 }
+
+//----------------------------------------------------------------------------
+// Air-Jet Entering water reservoir
+// [x,y] \in [0,30] x [-15,15]
+// Final Time: 1000.0
+// BC: L-I, R-T, B-R, T-R
+// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_2 = 0.0
+//----------------------------------------------------------------------------
+
+void AirJet_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    V0[0] = 1000.0;
+    V0[1] = 1.0;
+    V0[2] = 0.0;
+    V0[3] = 0.0;
+    V0[4] = 1.013;
+    V0[5] = 1.0 - 1.0e-6;
+
+    PDEPrim2Cons(V0, Q0);
+}
+
+# endif
+
+

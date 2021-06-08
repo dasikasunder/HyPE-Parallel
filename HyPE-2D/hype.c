@@ -29,25 +29,25 @@ int main(int argc,char **argv) {
 
     AppCtx Ctx; 
 
-    Ctx.N               = 2;
+    Ctx.N               = 1;
     Ctx.x_min           = 0.0;
-    Ctx.x_max           = 1.0;
-    Ctx.y_min           = 0.0;
-    Ctx.y_max           = 1.0;
-    Ctx.N_x             = 1024;
-    Ctx.N_y             = 1024;
+    Ctx.x_max           = 30.0;
+    Ctx.y_min           = -15.0;
+    Ctx.y_max           = 15.0;
+    Ctx.N_x             = 500;
+    Ctx.N_y             = 500;
     Ctx.CFL             = 0.9;                            
     Ctx.InitialStep     = 0;
     Ctx.InitialTime     = 0.0;                            
-    Ctx.FinalTime       = 1.0;
+    Ctx.FinalTime       = 100.0;
     Ctx.WriteInterval   = 500;
     Ctx.RestartInterval = 500;
     Ctx.ReconsPrimitive = PETSC_FALSE;
-    Ctx.OutFormat       = vts;
-    Ctx.left_boundary   = reflective;
-    Ctx.right_boundary  = reflective;
-    Ctx.bottom_boundary = reflective;
-    Ctx.top_boundary    = reflective;
+    Ctx.OutFormat       = vtk;
+    Ctx.LeftBoundary   = inlet;
+    Ctx.RightBoundary  = reflective;
+    Ctx.BottomBoundary = reflective;
+    Ctx.TopBoundary    = transmissive;
     Ctx.Restart         = PETSC_FALSE; 
 
     //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -96,12 +96,12 @@ int main(int argc,char **argv) {
     DMBoundaryType x_boundary;
     DMBoundaryType y_boundary;
 
-    if (Ctx.left_boundary == periodic || Ctx.right_boundary == periodic)
+    if (Ctx.LeftBoundary == periodic || Ctx.RightBoundary == periodic)
         x_boundary = DM_BOUNDARY_PERIODIC;
     else
         x_boundary = DM_BOUNDARY_GHOSTED; 
 
-    if (Ctx.bottom_boundary == periodic || Ctx.top_boundary == periodic)
+    if (Ctx.BottomBoundary == periodic || Ctx.TopBoundary == periodic)
         y_boundary = DM_BOUNDARY_PERIODIC;
     else
         y_boundary = DM_BOUNDARY_GHOSTED; 

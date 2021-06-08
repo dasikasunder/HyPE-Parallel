@@ -81,7 +81,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Transmissive/Outflow Boundary 
                 
-                if (Ctx->left_boundary == transmissive) {
+                if (Ctx->LeftBoundary == transmissive) {
                     
                     irhs = oned_begin; 
                 
@@ -91,7 +91,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Reflective Boundary 
                 
-                if (Ctx->left_boundary == reflective) {
+                if (Ctx->LeftBoundary == reflective) {
                     
                     irhs = oned_begin - 1 - i; 
                 
@@ -100,21 +100,47 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
 
 #ifdef EULER
                     w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#endif
 #endif
 
 #ifdef EFFECTIVE_GAMMA
                     w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#endif
 #endif
 
 #ifdef BAER_NUNZIATO
                     w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component (Phase 1)
                     w[j][i].comp[5] = -w[j][i].comp[5]; // Reflect x-velocity component (Phase 2)
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component (Phase 1)
+                    w[j][i].comp[6] = -w[j][i].comp[6]; // Reflect y-velocity component (Phase 2)
+#endif
 #endif
 
 #ifdef KAPILA_5EQN
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[3] = -w[j][i].comp[3]; // Reflect y-velocity component
+#endif
 #endif
 
+                }
+
+                // Inlet boundary
+
+                if (Ctx->LeftBoundary == inlet) {
+
+                    x_loc = Ctx->x_min + ((PetscReal)(i) + 0.5)*Ctx->h;
+                    y_loc = Ctx->y_min + ((PetscReal)(j) + 0.5)*Ctx->h;
+
+                    InletBCPrim(x_loc,y_loc,t,VR);
+
+                    for (c = 0; c < nVar; ++c)
+                        w[j][i].comp[c] = VR[c];
                 }
                 
             }
@@ -123,7 +149,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Transmissive/Outflow Boundary 
                 
-                if (Ctx->right_boundary == transmissive) {
+                if (Ctx->RightBoundary == transmissive) {
                     
                     irhs = oned_end; 
                     
@@ -133,7 +159,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Reflective Boundary
                 
-                if (Ctx->right_boundary == reflective) {
+                if (Ctx->RightBoundary == reflective) {
                     
                     irhs = 2*oned_end - i + 1; 
                     
@@ -142,19 +168,32 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
 
 #ifdef EULER
                     w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#endif
 #endif
 
 #ifdef EFFECTIVE_GAMMA
                     w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#endif
 #endif
 
 #ifdef BAER_NUNZIATO
                     w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component (Phase 1)
                     w[j][i].comp[5] = -w[j][i].comp[5]; // Reflect x-velocity component (Phase 2)
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component (Phase 1)
+                    w[j][i].comp[6] = -w[j][i].comp[6]; // Reflect y-velocity component (Phase 2)
+#endif
 #endif
 
 #ifdef KAPILA_5EQN
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[3] = -w[j][i].comp[3]; // Reflect y-velocity component
+#endif
 #endif
 
                 }
@@ -171,7 +210,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Transmissive/Outflow Boundary
                 
-                if (Ctx->bottom_boundary == transmissive) {
+                if (Ctx->BottomBoundary == transmissive) {
                 
                     irhs = oned_begin;
                     
@@ -181,7 +220,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Reflective Boundary
                 
-                if (Ctx->bottom_boundary == reflective) {
+                if (Ctx->BottomBoundary == reflective) {
                 
                     irhs = oned_begin - 1 - j;
                     
@@ -189,20 +228,33 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                         w[j][i].comp[c] = w[irhs][i].comp[c]; 
 
 #ifdef EULER
-                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect x-velocity component
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#endif
 #endif
 
 #ifdef EFFECTIVE_GAMMA
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#endif
 #endif
 
 #ifdef BAER_NUNZIATO
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component (Phase 1)
                     w[j][i].comp[6] = -w[j][i].comp[6]; // Reflect y-velocity component (Phase 2)
+#ifdef VISCOUS
+                    w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component (Phase 1)
+                    w[j][i].comp[5] = -w[j][i].comp[5]; // Reflect x-velocity component (Phase 2)
+#endif
 #endif
 
 #ifdef KAPILA_5EQN
                     w[j][i].comp[3] = -w[j][i].comp[3]; // Reflect y-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect x-velocity component
+#endif
 #endif
                 }
             }
@@ -211,7 +263,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Transmissive/Outflow Boundary
                 
-                if (Ctx->top_boundary == transmissive) {
+                if (Ctx->TopBoundary == transmissive) {
                 
                     irhs = oned_end;
                     
@@ -221,7 +273,7 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                 
                 // Reflective Boundary
                 
-                if (Ctx->top_boundary == reflective) {
+                if (Ctx->TopBoundary == reflective) {
                 
                     irhs = 2*oned_end - j + 1;;
                     
@@ -230,19 +282,32 @@ PetscErrorCode RHSFunctionPrim(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
 
 #ifdef EULER
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect x-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#endif
 #endif
 
 #ifdef EFFECTIVE_GAMMA
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component
+#endif
 #endif
 
 #ifdef BAER_NUNZIATO
                     w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect y-velocity component (Phase 1)
                     w[j][i].comp[6] = -w[j][i].comp[6]; // Reflect y-velocity component (Phase 2)
+#ifdef VISCOUS
+                    w[j][i].comp[1] = -w[j][i].comp[1]; // Reflect x-velocity component (Phase 1)
+                    w[j][i].comp[5] = -w[j][i].comp[5]; // Reflect x-velocity component (Phase 2)
+#endif
 #endif
 
 #ifdef KAPILA_5EQN
-                    w[j][i].comp[3] = -w[j][i].comp[3]; // Reflect y-momentum component 
+                    w[j][i].comp[3] = -w[j][i].comp[3]; // Reflect y-velocity component
+#ifdef VISCOUS
+                    w[j][i].comp[2] = -w[j][i].comp[2]; // Reflect x-velocity component
+#endif
 #endif
                 }
             }

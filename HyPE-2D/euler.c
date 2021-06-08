@@ -130,7 +130,7 @@ PetscReal PDEViscFlux(const PetscReal* Q, const PetscReal grad_Q[nVar][DIM], Pet
     F[0] =  0.0;
     F[1] = -nx*tau_xx - ny*tau_xy;
     F[2] = -nx*tau_xy - ny*tau_yy;
-    F[3] = -nx*(u*tau_xx + v*tau_xy - q_x) - ny*(u*tau_xy + v*tau_yy - q_y);
+    F[3] = -nx*(u*tau_xx + v*tau_xy - 0.0*q_x) - ny*(u*tau_xy + v*tau_yy - 0.0*q_y);
 
     return PetscMax(r4_3*mu*irho, GAMMA_1*mu*irho/PR);
 }
@@ -315,6 +315,25 @@ PetscBool PDECheckPADPrim(const PetscReal *V) {
 // Test Cases
 //----------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------
+// Lid driven cavity
+// [x,y] \in [0,1] x [0,1]
+// Final Time: 10.0
+// BC: L-wall, R-wall, B-wall, T-moving wall
+// GAMMA = 1.4; MU = 1.0e-2
+//----------------------------------------------------------------------------
+
+void LidDrivenCavity_NS(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    V0[0] = 1.0;
+    V0[1] = 0.0;
+    V0[2] = 0.0;
+    V0[3] = 100.0/GAMMA_1;
+
+    PDEPrim2Cons(V0,Q0);
+}
 
 //----------------------------------------------------------------------------
 // Viscous Shock Tube
@@ -326,7 +345,7 @@ PetscBool PDECheckPADPrim(const PetscReal *V) {
 
 void ViscousShockTube_NS(PetscReal x, PetscReal y, PetscReal* Q0) {
 
-        PetscReal V0[nVar];
+    PetscReal V0[nVar];
 
     if (x <= 0.5) {
         V0[0] = 120.0;
@@ -341,24 +360,6 @@ void ViscousShockTube_NS(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[2] = 0.0;
         V0[3] = V0[0]/GAMMA_1;
     }
-
-    /*
-    V0[0] = 1.2;
-    V0[1] = 0.0;
-    V0[2] = 0.0;
-    V0[3] = V0[0]/GAMMA;
-
-    PetscReal x_m = 0.5;
-    PetscReal diffusion = 0.03; // Increase for more diffused solution
-
-    PetscReal rhoL = 120.0;     PetscReal rhoR = 1.2;
-    PetscReal pL = 120.0/GAMMA; PetscReal pR = 1.2/GAMMA;
-
-    V0[0] = 0.5*(rhoL + rhoR) + 0.5*(rhoR - rhoL)*PetscTanhReal((x - x_m)/diffusion);
-    V0[1] = 0.0;
-    V0[2] = 0.0;
-    V0[3] = 0.5*(pL + pR) + 0.5*(pR - pL)*PetscTanhReal((x - x_m)/diffusion);
-    */
 
     PDEPrim2Cons(V0,Q0);
 }
