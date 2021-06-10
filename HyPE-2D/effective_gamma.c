@@ -75,7 +75,7 @@ PetscReal PDEFlux(const PetscReal *Q,
     }
 
     if ((p + P_inf)  < prs_floor) {
-        printf("Negative pressure, p = %f\n", p + P_inf);
+        printf("Negative pressure, p + p_inf = %f\n", p + P_inf);
         printf("At x = %f, y = %f\n", x, y);
         MPI_Abort(PETSC_COMM_WORLD, 1);
     }
@@ -229,7 +229,7 @@ void InletBC(PetscReal x, PetscReal y, PetscReal t, PetscReal* Q) {
     r = PetscAbsReal(y);
 
     if (r < 1.0) {
-        V[0] = rho_water;
+        V[0] = rho_air;
         V[1] = 2.0*U_avg*(1.0 - y*y);
     }
     else {
@@ -403,7 +403,7 @@ void InletBCPrim(PetscReal x, PetscReal y, PetscReal t, PetscReal* V) {
     r = PetscAbsReal(y);
 
     if (r < 1.0) {
-        V[0] = rho_water;
+        V[0] = rho_air;
         V[1] = 2.0*U_avg*(1.0 - y*y);
     }
     else {
@@ -419,6 +419,53 @@ void InletBCPrim(PetscReal x, PetscReal y, PetscReal t, PetscReal* V) {
 //---------------------------------------------------------------------------------------------------------------------------------------
 // Test cases
 //---------------------------------------------------------------------------------------------------------------------------------------
+
+//----------------------------------------------------------------------------
+// Shock in water hitting air coloumn
+// [x,y] \in [0,10] x [-2.5,2.5]
+// Final Time: 0.02
+// BC: L-T, R-T, B-T, T-T
+// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_2 = 0.0
+//----------------------------------------------------------------------------
+
+void WaterAir_EG(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    PetscReal x0 = 4.375; PetscReal y0 = 0.0;
+    PetscReal R = 1.0;
+
+    // (Water) Shock
+
+    if (x < 1.0) {
+        V0[0] = 1.325;
+        V0[1] = 68.52;
+        V0[2] = 0.0;
+        V0[3] = 1.915e4;
+        V0[4] = 1.0-1.0e-6;
+    }
+
+    else {
+        V0[0] = 1.0;
+        V0[1] = 0.0;
+        V0[2] = 0.0;
+        V0[3] = 1.0;
+        V0[4] = 1.0-1.0e-6;
+    }
+
+    // (Air) Bubble
+
+    if ((x-x0)*(x-x0) + (y-y0)*(y-y0) < R*R) {
+
+        V0[0] = 0.001;
+        V0[1] = 0.0;
+        V0[2] = 0.0;
+        V0[3] = 1.0;
+        V0[4] = 1.0e-6;
+    }
+
+    PDEPrim2Cons(V0, Q0);
+}
 
 //----------------------------------------------------------------------------
 // Air-Jet Entering water reservoir

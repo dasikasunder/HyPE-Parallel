@@ -309,8 +309,6 @@ PetscBool PDECheckPADPrim(const PetscReal *V) {
     return PAD;
 }
 
-#endif
-
 //----------------------------------------------------------------------------
 // Test Cases
 //----------------------------------------------------------------------------
@@ -363,3 +361,7 @@ void ViscousShockTube_NS(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PDEPrim2Cons(V0,Q0);
 }
+
+#endif
+
+

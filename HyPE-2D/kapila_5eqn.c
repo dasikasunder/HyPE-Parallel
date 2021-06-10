@@ -648,7 +648,7 @@ void air_helium_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
 // GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_2 = 0.0
 //----------------------------------------------------------------------------
 
-void water_air_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void WaterAir_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
@@ -663,7 +663,7 @@ void water_air_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[2] = 68.52;
         V0[3] = 0.0;
         V0[4] = 1.915e4;
-        V0[5] = 0.99;
+        V0[5] = 1.0-1.0e-6;
     }
 
     else {
@@ -672,7 +672,7 @@ void water_air_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[2] = 0.0;
         V0[3] = 0.0;
         V0[4] = 1.0;
-        V0[5] = 0.99;
+        V0[5] = 1.0-1.0e-6;
     }
 
     // (Air) Bubble
@@ -684,7 +684,7 @@ void water_air_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[2] = 0.0;
         V0[3] = 0.0;
         V0[4] = 1.0;
-        V0[5] = 0.01;
+        V0[5] = 1.0e-6;
     }
 
     PDEPrim2Cons(V0, Q0);

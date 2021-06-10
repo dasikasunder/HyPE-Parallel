@@ -11,7 +11,7 @@
 
 void InitialCondition(PetscReal x, PetscReal y, PetscReal* Q0) {
 
-    AirJet_KP5(x,y,Q0);
+    WaterAir_KP5(x,y,Q0);
 }
 
 //----------------------------------------------------------------------------

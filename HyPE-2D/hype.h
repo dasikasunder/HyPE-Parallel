@@ -30,9 +30,10 @@
 // Various constants used throught the code 
 //----------------------------------------------------------------------------
 
+//#define EFFECTIVE_GAMMA
 # define KAPILA_5EQN
 //# define VISCOUS
-# define nVar 6      /* Number of components in the PDE system */
+# define nVar 5      /* Number of components in the PDE system */
 # define DIM 2       /* Dimensions of the problem */
 
 // Physical Constants 
@@ -329,11 +330,12 @@ void ViscousShockTube_NS(PetscReal, PetscReal, PetscReal*);
 void smooth_vortex_kp5(PetscReal, PetscReal, PetscReal*);
 void interface_advection_kp5(PetscReal, PetscReal, PetscReal*);
 void air_helium_kp5(PetscReal, PetscReal, PetscReal*);
-void water_air_kp5(PetscReal, PetscReal, PetscReal*);
+void WaterAir_KP5(PetscReal, PetscReal, PetscReal*);
 void AirJet_KP5(PetscReal, PetscReal, PetscReal*);
 
 /* Effective-Gamma Model */
 
+void WaterAir_EG(PetscReal, PetscReal, PetscReal*);
 void AirJet_EG(PetscReal, PetscReal, PetscReal*);
 
 /* Diffuse Interface Model */
