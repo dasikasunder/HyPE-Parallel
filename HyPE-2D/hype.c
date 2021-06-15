@@ -31,23 +31,23 @@ int main(int argc,char **argv) {
 
     Ctx.N               = 1;
     Ctx.x_min           = 0.0;
-    Ctx.x_max           = 10.0;
-    Ctx.y_min           = -2.5;
-    Ctx.y_max           = 2.5;
-    Ctx.N_x             = 400;
-    Ctx.N_y             = 200;
+    Ctx.x_max           = 0.356;
+    Ctx.y_min           = 0.0;
+    Ctx.y_max           = 0.089;
+    Ctx.N_x             = 2000;
+    Ctx.N_y             = 500;
     Ctx.CFL             = 0.9;                            
     Ctx.InitialStep     = 0;
     Ctx.InitialTime     = 0.0;
-    Ctx.FinalTime       = 0.02;
+    Ctx.FinalTime       = 674.0e-6;
     Ctx.WriteInterval   = 1000;
     Ctx.RestartInterval = 500;
     Ctx.ReconsPrimitive = PETSC_FALSE;
     Ctx.OutFormat       = vtk;
     Ctx.LeftBoundary    = transmissive;
     Ctx.RightBoundary   = transmissive;
-    Ctx.BottomBoundary  = transmissive;
-    Ctx.TopBoundary     = transmissive;
+    Ctx.BottomBoundary  = reflective;
+    Ctx.TopBoundary     = reflective;
     Ctx.Restart         = PETSC_FALSE; 
 
     //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

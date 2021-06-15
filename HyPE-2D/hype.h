@@ -31,16 +31,16 @@
 //----------------------------------------------------------------------------
 
 //#define EFFECTIVE_GAMMA
-# define KAPILA_5EQN
+#define KAPILA_5EQN
 //# define VISCOUS
-# define nVar 5      /* Number of components in the PDE system */
+# define nVar 6      /* Number of components in the PDE system */
 # define DIM 2       /* Dimensions of the problem */
 
 // Physical Constants 
 
-static const PetscReal GAMMA_1  = 4.4;      /* Specific heat ratio of first phase */
-static const PetscReal GAMMA_2  = 1.4;      /* Specific heat ratio of second phase */
-static const PetscReal PI_1     = 6000.0;   /* Stiffness constant of first phase */
+static const PetscReal GAMMA_1  = 1.4;      /* Specific heat ratio of first phase */
+static const PetscReal GAMMA_2  = 1.648;    /* Specific heat ratio of second phase */
+static const PetscReal PI_1     = 0.0;      /* Stiffness constant of first phase */
 static const PetscReal PI_2     = 0.0;      /* Stiffness constant of second phase */
 static const PetscReal MU_1     = 1.0e-2;   /* Viscosity of first phase */
 static const PetscReal MU_2     = 0.0;      /* Viscosity of second phase */
@@ -329,7 +329,7 @@ void ViscousShockTube_NS(PetscReal, PetscReal, PetscReal*);
 
 void smooth_vortex_kp5(PetscReal, PetscReal, PetscReal*);
 void interface_advection_kp5(PetscReal, PetscReal, PetscReal*);
-void air_helium_kp5(PetscReal, PetscReal, PetscReal*);
+void AirHelium_KP5(PetscReal, PetscReal, PetscReal*);
 void WaterAir_KP5(PetscReal, PetscReal, PetscReal*);
 void AirJet_KP5(PetscReal, PetscReal, PetscReal*);
 
@@ -337,6 +337,7 @@ void AirJet_KP5(PetscReal, PetscReal, PetscReal*);
 
 void WaterAir_EG(PetscReal, PetscReal, PetscReal*);
 void AirJet_EG(PetscReal, PetscReal, PetscReal*);
+void AirHelium_EG(PetscReal, PetscReal, PetscReal*);
 
 /* Diffuse Interface Model */
 

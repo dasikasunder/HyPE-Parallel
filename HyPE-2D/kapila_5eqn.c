@@ -599,7 +599,7 @@ void interface_advection_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
 // GAMMA_1 = 1.4; GAMMA_2 = 1.648; PI_1 = 0.0; PI_2 = 0.0
 //----------------------------------------------------------------------------
 
-void air_helium_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void AirHelium_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
