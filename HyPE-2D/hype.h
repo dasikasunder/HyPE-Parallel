@@ -38,9 +38,9 @@
 
 // Physical Constants 
 
-static const PetscReal GAMMA_1  = 1.4;      /* Specific heat ratio of first phase */
-static const PetscReal GAMMA_2  = 1.648;    /* Specific heat ratio of second phase */
-static const PetscReal PI_1     = 0.0;      /* Stiffness constant of first phase */
+static const PetscReal GAMMA_1  = 4.4;      /* Specific heat ratio of first phase */
+static const PetscReal GAMMA_2  = 1.4;      /* Specific heat ratio of second phase */
+static const PetscReal PI_1     = 6000.0;   /* Stiffness constant of first phase */
 static const PetscReal PI_2     = 0.0;      /* Stiffness constant of second phase */
 static const PetscReal MU_1     = 1.0e-2;   /* Viscosity of first phase */
 static const PetscReal MU_2     = 0.0;      /* Viscosity of second phase */
@@ -75,15 +75,8 @@ typedef struct {
 enum bndry_type{wall, inlet, periodic, reflective, transmissive};
 
 //----------------------------------------------------------------------------
-// Output file formats
-//----------------------------------------------------------------------------
-
-enum output_format{vts,vtk};
-
-//----------------------------------------------------------------------------
 // Multidimensional array structures (upto 7 dimensions)
 //---------------------------------------------------------------------------- 
-
 
 PetscInt Malloc1D(PetscReal**, PetscInt);
 PetscInt Free1D(PetscReal**);
@@ -227,7 +220,6 @@ typedef struct {
     enum bndry_type RightBoundary;   /* Boundary condition on the right face */
     enum bndry_type TopBoundary;     /* Boundary condition on the top face */
     enum bndry_type BottomBoundary;  /* Boundary condition on the bottom face */
-    enum output_format OutFormat;     /* Whether to output data in vts, vtk format */
     PetscInt N;                       /* Degree of approximation (0,1,2,3) */
     PetscInt nDOF;                    /* Number of degrees of freedom per variable */
     PetscInt Ngp_Face;                /* Number of quadrature points on face */
@@ -327,10 +319,11 @@ void ViscousShockTube_NS(PetscReal, PetscReal, PetscReal*);
 
 /* Kapila 5-EQN Model */
 
-void smooth_vortex_kp5(PetscReal, PetscReal, PetscReal*);
+void smoothVortex_KP5(PetscReal, PetscReal, PetscReal*);
 void interface_advection_kp5(PetscReal, PetscReal, PetscReal*);
 void AirHelium_KP5(PetscReal, PetscReal, PetscReal*);
 void WaterAir_KP5(PetscReal, PetscReal, PetscReal*);
+void WaterCylinder_KP5(PetscReal, PetscReal, PetscReal*);
 void AirJet_KP5(PetscReal, PetscReal, PetscReal*);
 
 /* Effective-Gamma Model */

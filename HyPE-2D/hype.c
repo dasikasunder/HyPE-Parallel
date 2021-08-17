@@ -29,25 +29,24 @@ int main(int argc,char **argv) {
 
     AppCtx Ctx; 
 
-    Ctx.N               = 1;
-    Ctx.x_min           = 0.0;
-    Ctx.x_max           = 0.356;
-    Ctx.y_min           = 0.0;
-    Ctx.y_max           = 0.089;
-    Ctx.N_x             = 2000;
-    Ctx.N_y             = 500;
+    Ctx.N               = 2;
+    Ctx.x_min           = -3.0;
+    Ctx.x_max           =  3.0;
+    Ctx.y_min           = -3.0;
+    Ctx.y_max           =  3.0;
+    Ctx.N_x             =  256;
+    Ctx.N_y             =  256;
     Ctx.CFL             = 0.9;                            
     Ctx.InitialStep     = 0;
     Ctx.InitialTime     = 0.0;
-    Ctx.FinalTime       = 674.0e-6;
+    Ctx.FinalTime       = 6.0;
     Ctx.WriteInterval   = 1000;
-    Ctx.RestartInterval = 500;
+    Ctx.RestartInterval = 1000;
     Ctx.ReconsPrimitive = PETSC_FALSE;
-    Ctx.OutFormat       = vtk;
-    Ctx.LeftBoundary    = transmissive;
-    Ctx.RightBoundary   = transmissive;
-    Ctx.BottomBoundary  = reflective;
-    Ctx.TopBoundary     = reflective;
+    Ctx.LeftBoundary    = periodic;
+    Ctx.RightBoundary   = periodic;
+    Ctx.BottomBoundary  = periodic;
+    Ctx.TopBoundary     = periodic;
     Ctx.Restart         = PETSC_FALSE; 
 
     //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -251,7 +250,6 @@ int main(int argc,char **argv) {
     Ctx.gradphiFace_x = allocate3d(4, Ctx.Ngp_Face,Ctx.nDOF); // 4 -> Number of faces in a cell
     Ctx.gradphiFace_y = allocate3d(4, Ctx.Ngp_Face,Ctx.nDOF); // 4 -> Number of faces in a cell
     
-
     // Find the value of basis functions and gradients at face quadrature points
 
     for (q = 0; q < Ctx.Ngp_Face; ++q) {
@@ -394,16 +392,8 @@ int main(int argc,char **argv) {
     char filename[20]; 
     PetscViewer viewer;
 
-    if (Ctx.OutFormat == vts) {
-        sprintf(filename, "sol-%08d.vts", time_steps);
-        ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
-    }
-
-    if (Ctx.OutFormat == vtk) {
-        sprintf(filename, "sol-%08d.vtk", time_steps);
-        ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, &viewer);CHKERRQ(ierr);
-        ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_VTK);CHKERRQ(ierr);
-    }
+    sprintf(filename, "sol-%08d.vts", time_steps);
+    ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
 
     ierr = DMView(da, viewer);CHKERRQ(ierr);
     ierr = VecView(Ctx.W, viewer);CHKERRQ(ierr);

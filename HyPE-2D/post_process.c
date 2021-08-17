@@ -16,7 +16,7 @@ PetscErrorCode MonitorFunction (TS ts,PetscInt step, PetscReal time, Vec U, void
 
     // Set the time step based on CFL condition 
 
-    ierr = TSSetTimeStep(ts, Ctx->dt);CHKERRQ(ierr);
+    //ierr = TSSetTimeStep(ts, Ctx->dt);CHKERRQ(ierr);
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d t = %.5e\n", step, time);CHKERRQ(ierr);
 
@@ -34,16 +34,8 @@ PetscErrorCode MonitorFunction (TS ts,PetscInt step, PetscReal time, Vec U, void
             char filename[20];
             PetscViewer viewer;
 
-            if (Ctx->OutFormat == vts) {
-                sprintf(filename, "sol-%08d.vts", step); // 8 is the padding level, increase it for longer simulations
-                ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
-            }
-
-            if (Ctx->OutFormat == vtk) {
-                sprintf(filename, "sol-%08d.vtk", step); // 8 is the padding level, increase it for longer simulations
-                ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD, filename, &viewer);CHKERRQ(ierr);
-                ierr = PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_VTK);CHKERRQ(ierr);
-            }
+            sprintf(filename, "sol-%08d.vts", step); // 8 is the padding level, increase it for longer simulations
+            ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD, filename, FILE_MODE_WRITE, &viewer);CHKERRQ(ierr);
 
             ierr = DMView(da, viewer);
             VecView(Ctx->W, viewer);

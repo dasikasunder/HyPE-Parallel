@@ -186,6 +186,8 @@ void PDENCP(const PetscReal *Q, const PetscReal *grad_Q_x, const PetscReal *grad
     PetscReal u_x = irho*irho*(grad_Q_x[2]*rho - Q[2]*(grad_Q_x[0] + grad_Q_x[1]));
     PetscReal v_y = irho*irho*(grad_Q_y[3]*rho - Q[3]*(grad_Q_y[0] + grad_Q_y[1]));
 
+    K = 0.0;
+
     // Now find the fluxes
 
     BgradQ[0] = 0.0;
@@ -224,6 +226,7 @@ void PDEmatrixB(const PetscReal *Q, PetscReal nx, PetscReal ny, PetscReal B[nVar
 
     PetscReal un = u*nx + v*ny;
 
+    K = 0.0;
 
     for (i = 0; i < nVar; ++i)
         for (j = 0; j < nVar; ++j)
@@ -270,7 +273,7 @@ PetscBool PDECheckPAD(const PetscReal *Q) {
         PAD = PETSC_FALSE;
     }
 
-    if (phi_1 < 0.0 || phi_1 > 1.0) {
+    if (phi_1 < 1.0e-4 || phi_1 > 1.0-1.0e-4) {
         PAD = PETSC_FALSE;
     }
 
@@ -434,6 +437,7 @@ void PDENCPPrim(const PetscReal *V, const PetscReal *grad_V_x, const PetscReal *
     PetscReal a_2_sq = GAMMA_2*(p + PI_2)/rho_2;
     PetscReal K = (phi_1*phi_2*(rho_2*a_2_sq - rho_1*a_1_sq))/(phi_1*rho_2*a_2_sq + phi_2*rho_1*a_1_sq);
 
+    K = 0.0;
 
     // Find the Non-Conservative product
 
@@ -529,12 +533,12 @@ void InletBCPrim(PetscReal x, PetscReal y, PetscReal t, PetscReal* V) {
 // GAMMA_1 = 4.0; GAMMA_2 = 1.4; PI_1 = 20.0; PI_2 = 0.0
 //----------------------------------------------------------------------------
 
-void smooth_vortex_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void smoothVortex_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
-    PetscReal alpha_min = 0.01;
-    PetscReal alpha_max = 0.99;
+    PetscReal alpha_min = 0.25;
+    PetscReal alpha_max = 0.75;
     PetscReal omega = PETSC_PI/3.0;
     PetscReal p_atm = 1.0;
     PetscReal k_eps = 0.3;
@@ -552,6 +556,15 @@ void smooth_vortex_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
     V0[3] = v0;
     V0[4] = p_atm;
     V0[5] = alpha_min + 0.5*(alpha_max-alpha_min)*erfc((r/R - 1.0)/k_eps);
+
+    /*
+    V0[0] = 1.0;
+    V0[1] = 0.001;
+    V0[2] = 1.0;
+    V0[3] = 1.0;
+    V0[4] = 1.01325;
+    V0[5] = 0.5 + 0.25*PetscSinReal(PETSC_PI*(x+y));
+    */
 
     PDEPrim2Cons(V0, Q0);
 
@@ -685,6 +698,57 @@ void WaterAir_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[3] = 0.0;
         V0[4] = 1.0;
         V0[5] = 1.0e-6;
+    }
+
+    PDEPrim2Cons(V0, Q0);
+}
+
+//----------------------------------------------------------------------------
+// Mach 6 Shock in air hitting water cylinder
+// [x,y] \in [0,8] x [-1,1]
+// Final Time: 0.896
+// BC: L-T, R-T, B-R, T-R
+// g1 = 4.4; g2 = 1.4; p1 = 6000.0; g1 = 0.0
+//----------------------------------------------------------------------------
+
+void WaterCylinder_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    const PetscReal x0 = 2.0; const PetscReal y0 = 0.0;
+    const PetscReal R = 0.562; const PetscReal eps = 1.0e-2;
+
+    // Shock
+
+    if (x < 1.0) {
+
+        V0[0] = 1000.0;
+        V0[1] = 5.26829;
+        V0[2] = 5.79;
+        V0[3] = 0.0;
+        V0[4] = 42.39;
+        V0[5] = eps;
+    }
+
+    else {
+        V0[0] = 1000.0;
+        V0[1] = 1.0;
+        V0[2] = 0.0;;
+        V0[3] = 0.0;
+        V0[4] = 1.013;
+        V0[5] = eps;
+    }
+
+    // Water Cylinder
+
+    if ((x-x0)*(x-x0) + (y-y0)*(y-y0) < R*R) {
+
+        V0[0] = 1000.0;
+        V0[1] = 1.0;
+        V0[2] = 0.0;;
+        V0[3] = 0.0;
+        V0[4] = 1.013;
+        V0[5] = 1.0-eps;
     }
 
     PDEPrim2Cons(V0, Q0);

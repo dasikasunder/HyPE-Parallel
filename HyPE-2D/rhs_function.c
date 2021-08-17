@@ -413,7 +413,7 @@ PetscErrorCode RHSFunction(TS ts, PetscReal t, Vec U, Vec RHS, void* ctx) {
                     sol[1][c] = minmod(u[j][i+1].comp[c]-u[j][i].comp[c],u[j][i].comp[c]-u[j][i-1].comp[c]);
                     sol[2][c] = minmod(u[j+1][i].comp[c]-u[j][i].comp[c],u[j][i].comp[c]-u[j-1][i].comp[c]);
                     
-                    for (k = 3; k < Ctx->nDOF; ++k) {
+                    for (k = 1; k < Ctx->nDOF; ++k) {
                         sol[k][c] = 0.0; 
                     }
                 }
