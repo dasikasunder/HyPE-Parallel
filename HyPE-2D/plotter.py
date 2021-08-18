@@ -227,6 +227,24 @@ def fiveEqnModel(fileName):
     return Name, fieldNames, fieldTypes, X, Y, sol
 
 ##################################################################################################################################
+# Variables to be plotted in the four equation model
+##################################################################################################################################
+
+def fourEqnModel(fileName):
+    Name = "5EqnModel"
+    fieldNames = ["Density", "Velocity", "Velocity", "Pressure", "Vol-Fraction", "grad-RHO"]
+    fieldTypes = [0, 1, 2, 0, 0, 0]
+    X,Y,sol_raw = vtsReader(fileName)
+    sol = np.zeros((X.shape[0],X.shape[1],6))
+    sol[:,:,0] = sol_raw[:,:,0]
+    sol[:,:,1] = sol_raw[:,:,1]
+    sol[:,:,2] = sol_raw[:,:,2]
+    sol[:,:,3] = sol_raw[:,:,3]
+    sol[:,:,4] = sol_raw[:,:,4]
+    sol[:,:,5] = calcGrad(sol[:,:,0])
+    return Name, fieldNames, fieldTypes, X, Y, sol
+
+##################################################################################################################################
 
 for fileName in os.listdir('.'):
     if fileName.endswith('.vts'):
