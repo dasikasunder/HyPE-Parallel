@@ -31,6 +31,7 @@
 //----------------------------------------------------------------------------
 
 //#define EFFECTIVE_GAMMA
+//#define DIFFUSE_INTERFACE
 #define KAPILA_5EQN
 //# define VISCOUS
 # define nVar 6      /* Number of components in the PDE system */
@@ -40,7 +41,7 @@
 
 static const PetscReal GAMMA_1  = 4.4;      /* Specific heat ratio of first phase */
 static const PetscReal GAMMA_2  = 1.4;      /* Specific heat ratio of second phase */
-static const PetscReal PI_1     = 6000.0;   /* Stiffness constant of first phase */
+static const PetscReal PI_1     = 6000.0;      /* Stiffness constant of first phase */
 static const PetscReal PI_2     = 0.0;      /* Stiffness constant of second phase */
 static const PetscReal MU_1     = 1.0e-2;   /* Viscosity of first phase */
 static const PetscReal MU_2     = 0.0;      /* Viscosity of second phase */
@@ -311,28 +312,23 @@ PetscErrorCode ComputePrimitiveVariables(Vec, Vec, DM);
 // Test cases
 //----------------------------------------------------------------------------
 
+/* Single Phase */
 
-/* Euler's / Navier-Stokes equations */
+void LidDrivenCavity(PetscReal, PetscReal, PetscReal*);
+void ViscousShockTube(PetscReal, PetscReal, PetscReal*);
 
-void LidDrivenCavity_NS(PetscReal, PetscReal, PetscReal*);
-void ViscousShockTube_NS(PetscReal, PetscReal, PetscReal*);
-
-/* Kapila 5-EQN Model */
-
-void smoothVortex_KP5(PetscReal, PetscReal, PetscReal*);
-void interface_advection_kp5(PetscReal, PetscReal, PetscReal*);
-void AirHelium_KP5(PetscReal, PetscReal, PetscReal*);
-void WaterAir_KP5(PetscReal, PetscReal, PetscReal*);
-void WaterCylinder_KP5(PetscReal, PetscReal, PetscReal*);
-void AirJet_KP5(PetscReal, PetscReal, PetscReal*);
-
-/* Effective-Gamma Model */
-
-void WaterAir_EG(PetscReal, PetscReal, PetscReal*);
-void AirJet_EG(PetscReal, PetscReal, PetscReal*);
-void AirHelium_EG(PetscReal, PetscReal, PetscReal*);
-
-/* Diffuse Interface Model */
+/* Multi Phase */
+void SmoothVortex(PetscReal,PetscReal,PetscReal*);
+void InterfaceAdvection(PetscReal,PetscReal,PetscReal*);
+void AirHelium(PetscReal,PetscReal,PetscReal*);
+void AirR22(PetscReal,PetscReal,PetscReal*);
+void RichtmyerMeshkov(PetscReal,PetscReal,PetscReal*);
+void WaterCylinder(PetscReal,PetscReal,PetscReal*);
+void UnderWaterExplosion(PetscReal,PetscReal,PetscReal*);
+void AirCavity(PetscReal,PetscReal,PetscReal*);
+void BubbleCollapse(PetscReal,PetscReal,PetscReal*);
+void AirJet(PetscReal,PetscReal,PetscReal*);
+void WaterJet(PetscReal,PetscReal,PetscReal*);
 
 
 #endif /* HYPE_H_ */ 

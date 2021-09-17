@@ -16,7 +16,7 @@ PetscErrorCode MonitorFunction (TS ts,PetscInt step, PetscReal time, Vec U, void
 
     // Set the time step based on CFL condition 
 
-    //ierr = TSSetTimeStep(ts, Ctx->dt);CHKERRQ(ierr);
+    ierr = TSSetTimeStep(ts, Ctx->dt);CHKERRQ(ierr);
 
     ierr = PetscPrintf(PETSC_COMM_WORLD,"%d t = %.5e\n", step, time);CHKERRQ(ierr);
 
@@ -55,7 +55,7 @@ PetscErrorCode MonitorFunction (TS ts,PetscInt step, PetscReal time, Vec U, void
             ierr = PetscViewerDestroy(&viewer_binary); CHKERRQ(ierr);
         }
         
-        if((step+10)%(Ctx->RestartInterval) == 0) {
+        if((step+7)%(Ctx->RestartInterval) == 0) {
             ierr = PetscPrintf(PETSC_COMM_WORLD,"Writing data in binary to restart2.bin at t = %.7e\n", time);CHKERRQ(ierr);
             ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"restart2.bin",FILE_MODE_WRITE, &viewer_binary);CHKERRQ(ierr);
             ierr = VecView(U,viewer_binary);CHKERRQ(ierr);

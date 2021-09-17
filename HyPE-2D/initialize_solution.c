@@ -11,7 +11,7 @@
 
 void InitialCondition(PetscReal x, PetscReal y, PetscReal* Q0) {
 
-    smoothVortex_KP5(x,y,Q0);
+    AirCavity(x,y,Q0);
 }
 
 //----------------------------------------------------------------------------

@@ -79,13 +79,13 @@ PetscReal PDEFlux(const PetscReal *Q,
     if (rho < rho_floor) {
         printf("Negative density = %f\n", rho);
         printf("At x = %f, y = %f\n", x, y);
-        MPI_1_Abort(PETSC_COMM_WORLD, 1);
+        MPI_Abort(PETSC_COMM_WORLD, 1);
     }
 
     if (p  < prs_floor) {
         printf("Negative pressure, p = %f\n", p);
         printf("At x = %f, y = %f\n", x, y);
-        MPI_1_Abort(PETSC_COMM_WORLD, 1);
+        MPI_Abort(PETSC_COMM_WORLD, 1);
     }
 
     // Find the fluxes
@@ -225,13 +225,13 @@ PetscReal PDEFluxPrim(const PetscReal *V,
     if (rho < rho_floor) {
         printf("Negative density = %f\n", rho);
         printf("At x = %f, y = %f\n", x, y);
-        MPI_1_Abort(PETSC_COMM_WORLD, 1);
+        MPI_Abort(PETSC_COMM_WORLD, 1);
     }
 
     if (p  < prs_floor) {
         printf("Negative pressure, p = %f\n", p);
         printf("At x = %f, y = %f\n", x, y);
-        MPI_1_Abort(PETSC_COMM_WORLD, 1);
+        MPI_Abort(PETSC_COMM_WORLD, 1);
     }
 
     // Find the fluxes
@@ -305,5 +305,52 @@ PetscBool PDECheckPADPrim(const PetscReal *V) {
     return PAD;
 }
 
+
+void shockDiffractionCylinder_DIM(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    PetscReal M_s = 4.0;
+    PetscReal rho_1 = 1.4;
+    PetscReal p_1 = 1.0;
+    PetscReal a_1 = PetscSqrtReal(GAMMA_1*p_1/rho_1);
+    PetscReal prs_ratio = 1.0 + (2.0*GAMMA_1)/(GAMMA_1 + 1.0)*(M_s*M_s - 1.0);
+    PetscReal tempa = (GAMMA_1 + 1.0)/(GAMMA_1 - 1.0);
+    PetscReal rho_ratio = (1.0 + tempa*prs_ratio)/(tempa + prs_ratio);
+    tempa = (GAMMA_1-1.0)/(GAMMA_1+1.0);
+    PetscReal tempb = ((2.0*GAMMA_1)/(GAMMA_1+1.0))/(prs_ratio + tempa);
+    PetscReal u_p = (a_1/GAMMA_1)*(prs_ratio -1.0)*PetscSqrtReal(tempb);
+
+    // Gas
+
+    if (x < -0.5) {
+        V0[0] = rho_1*rho_ratio;
+        V0[1] = u_p;
+        V0[2] = 0.0;
+        V0[3] = p_1*prs_ratio;
+    }
+
+    else {
+
+        V0[0] = rho_1;
+        V0[1] = 0.0;
+        V0[2] = 0.0;
+        V0[3] = p_1;
+    }
+
+    // Solid
+
+    PetscReal x0 = 0.0; PetscReal y0 = 0.0; PetscReal R0 = 1.0;
+
+    if ((x-x0)*(x-x0) + (y-y0)*(y-y0) <= R0*R0)
+        V0[4] = 1.0e-2;
+    else
+        V0[4] = 1.0 - 1.0e-2;
+
+    V0[5] = 0.0;
+    V0[6] = 0.0;
+
+    PDEPrim2Cons(V0, Q0);
+}
 
 #endif

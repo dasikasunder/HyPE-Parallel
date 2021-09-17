@@ -15,15 +15,16 @@ void PDECons2Prim(const PetscReal *Q, PetscReal *V) {
 
     PetscReal alpha_1 = Q[5];
     PetscReal alpha_2 = 1.0 - alpha_1;
-    PetscReal GAMMA   = 1.0 + ((GAMMA_1-1.0)*(GAMMA_2-1.0))/((GAMMA_2-1.0)*alpha_1 + (GAMMA_1-1.0)*alpha_2);
-    PetscReal PI      = ((GAMMA -1.0)/GAMMA)*( GAMMA_1*PI_1*alpha_1/(GAMMA_1 - 1.0) + GAMMA_2*PI_2*alpha_2/(GAMMA_2 - 1.0) );
 
 
     PetscReal rho     = Q[0] + Q[1];
     PetscReal u       = Q[2]/rho;
     PetscReal v       = Q[3]/rho;
     PetscReal E       = Q[4];
-    PetscReal p       = (GAMMA-1.0)*(E - 0.5*rho*(u*u + v*v)) - GAMMA*PI;
+    PetscReal e       = E - 0.5*rho*(u*u+v*v);
+    PetscReal G1m1    = GAMMA_1-1.0;
+    PetscReal G2m1    = GAMMA_2-1.0;
+    PetscReal p       = (e*G1m1*G2m1 - alpha_1*GAMMA_1*PI_1*G2m1 - alpha_2*GAMMA_2*PI_2*G1m1)/(alpha_1*G2m1 + alpha_2*G1m1);
 
     V[0] = Q[0]/alpha_1;
     V[1] = Q[1]/alpha_2;
@@ -31,7 +32,6 @@ void PDECons2Prim(const PetscReal *Q, PetscReal *V) {
     V[3] = v;
     V[4] = p;
     V[5] = alpha_1;
-
 }
 
 //----------------------------------------------------------------------------
@@ -42,14 +42,15 @@ void PDEPrim2Cons(const PetscReal *V, PetscReal *Q) {
 
     PetscReal alpha_1 = V[5];
     PetscReal alpha_2 = 1.0 - alpha_1;
-    PetscReal GAMMA   = 1.0 + ((GAMMA_1-1.0)*(GAMMA_2-1.0))/((GAMMA_2-1.0)*alpha_1 + (GAMMA_1-1.0)*alpha_2);
-    PetscReal PI      = ((GAMMA -1.0)/GAMMA)*( GAMMA_1*PI_1*alpha_1/(GAMMA_1 - 1.0) + GAMMA_2*PI_2*alpha_2/(GAMMA_2 - 1.0) );
 
     PetscReal rho     = alpha_1*V[0] + alpha_2*V[1];
     PetscReal u       = V[2];
     PetscReal v       = V[3];
     PetscReal p       = V[4];
-    PetscReal E       = (p + GAMMA*PI)/(GAMMA-1.0) + 0.5*rho*(u*u + v*v);
+    PetscReal G1m1    = GAMMA_1-1.0;
+    PetscReal G2m1    = GAMMA_2-1.0;
+    PetscReal e       = (p*(alpha_1*G2m1 + alpha_2*G1m1) + alpha_1*GAMMA_1*PI_1*G2m1 + alpha_2*GAMMA_2*PI_2*G1m1)/(G1m1*G2m1);
+    PetscReal E = e + 0.5*rho*(u*u+v*v);
 
     Q[0] = alpha_1*V[0];
     Q[1] = alpha_2*V[1];
@@ -71,29 +72,28 @@ PetscReal PDEFlux(const PetscReal *Q,
     // First extract the primitive variables
     PetscReal alpha_1 = Q[5];
     PetscReal alpha_2 = 1.0 - alpha_1;
-    PetscReal GAMMA   = 1.0 + ((GAMMA_1-1.0)*(GAMMA_2-1.0))/((GAMMA_2-1.0)*alpha_1 + (GAMMA_1-1.0)*alpha_2);
-    PetscReal PI      = ((GAMMA -1.0)/GAMMA)*( GAMMA_1*PI_1*alpha_1/(GAMMA_1 - 1.0) + GAMMA_2*PI_2*alpha_2/(GAMMA_2 - 1.0) );
 
-    PetscReal rho_1   = Q[0]/alpha_1;
-    PetscReal rho_2   = Q[1]/alpha_2;
+    PetscReal rho_1 = Q[0]/alpha_1;
+    PetscReal rho_2 = Q[1]/alpha_2;
+
     PetscReal rho     = Q[0] + Q[1];
-    PetscReal irho    = 1.0/rho;
-    PetscReal u       = irho*Q[2];
-    PetscReal v       = irho*Q[3];
+    PetscReal u       = Q[2]/rho;
+    PetscReal v       = Q[3]/rho;
     PetscReal E       = Q[4];
-    PetscReal p       = (GAMMA-1.0)*(E - 0.5*rho*(u*u + v*v)) - GAMMA*PI;
+    PetscReal e       = E - 0.5*rho*(u*u+v*v);
+    PetscReal G1m1    = GAMMA_1-1.0;
+    PetscReal G2m1    = GAMMA_2-1.0;
+    PetscReal p       = (e*G1m1*G2m1 - alpha_1*GAMMA_1*PI_1*G2m1 - alpha_2*GAMMA_2*PI_2*G1m1)/(alpha_1*G2m1 + alpha_2*G1m1);
     PetscReal un = u*nx + v*ny;
+
+    PetscReal a1_sq = GAMMA_1*(p+PI_1)/rho_1;
+    PetscReal a2_sq = GAMMA_2*(p+PI_2)/rho_2;
+    PetscReal a_sq = (rho_1*a1_sq*rho_2*a2_sq)/(rho*(alpha_2*rho_1*a1_sq + alpha_1*rho_2*a2_sq));
 
     // Check if the input state is physically admissible
 
-    if (rho < rho_floor) {
-        printf("Negative density = %f\n", rho);
-        printf("At x = %f, y = %f\n", x, y);
-        MPI_Abort(PETSC_COMM_WORLD, 1);
-    }
-
-    if ( p + PI < prs_floor) {
-        printf("Negative pressure = %f\n", p + PI);
+    if (a_sq < prs_floor) {
+        printf("Negative square speed of sound = %f\n", a_sq);
         printf("At x = %f, y = %f\n", x, y);
         MPI_Abort(PETSC_COMM_WORLD, 1);
     }
@@ -107,7 +107,7 @@ PetscReal PDEFlux(const PetscReal *Q,
 
     // Obtain the maximum eigenvalue
 
-    PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(GAMMA*(p+PI)*irho);
+    PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(a_sq);
 
     return s_max;
 }
@@ -162,31 +162,30 @@ PetscReal PDEViscFlux(const PetscReal* Q, const PetscReal grad_Q[nVar][DIM], Pet
 //----------------------------------------------------------------------------
 
 void PDENCP(const PetscReal *Q, const PetscReal *grad_Q_x, const PetscReal *grad_Q_y, PetscReal *BgradQ) {
-
     PetscReal alpha_1 = Q[5];
     PetscReal alpha_2 = 1.0 - alpha_1;
-    PetscReal GAMMA   = 1.0 + ((GAMMA_1-1.0)*(GAMMA_2-1.0))/((GAMMA_2-1.0)*alpha_1 + (GAMMA_1-1.0)*alpha_2);
-    PetscReal PI      = ((GAMMA -1.0)/GAMMA)*( GAMMA_1*PI_1*alpha_1/(GAMMA_1 - 1.0) + GAMMA_2*PI_2*alpha_2/(GAMMA_2 - 1.0) );
 
-    PetscReal rho_1   = Q[0]/alpha_1;
-    PetscReal rho_2   = Q[1]/alpha_2;
+    PetscReal rho_1 = Q[0]/alpha_1;
+    PetscReal rho_2 = Q[1]/alpha_2;
+
     PetscReal rho     = Q[0] + Q[1];
     PetscReal irho    = 1.0/rho;
-    PetscReal u       = irho*Q[2];
-    PetscReal v       = irho*Q[3];
+    PetscReal u       = Q[2]/rho;
+    PetscReal v       = Q[3]/rho;
     PetscReal E       = Q[4];
-    PetscReal p       = (GAMMA-1.0)*(E - 0.5*rho*(u*u + v*v)) - GAMMA*PI;
+    PetscReal e       = E - 0.5*rho*(u*u+v*v);
+    PetscReal G1m1    = GAMMA_1-1.0;
+    PetscReal G2m1    = GAMMA_2-1.0;
+    PetscReal p       = (e*G1m1*G2m1 - alpha_1*GAMMA_1*PI_1*G2m1 - alpha_2*GAMMA_2*PI_2*G1m1)/(alpha_1*G2m1 + alpha_2*G1m1);
 
-    PetscReal a_1_sq  = GAMMA_1*(p + PI_1)/rho_1;
-    PetscReal a_2_sq  = GAMMA_2*(p + PI_2)/rho_2;
+    PetscReal a1_sq = GAMMA_1*(p+PI_1)/rho_1;
+    PetscReal a2_sq = GAMMA_2*(p+PI_2)/rho_2;
 
-    PetscReal K = alpha_1*alpha_2*(rho_2*a_2_sq - rho_1*a_1_sq)/(alpha_1*rho_2*a_2_sq + alpha_2*rho_1*a_1_sq);
+    PetscReal K = alpha_1*alpha_2*(rho_2*a2_sq - rho_1*a1_sq)/(alpha_1*rho_2*a2_sq + alpha_2*rho_1*a1_sq);
 
     PetscReal alpha1_x = grad_Q_x[5]; PetscReal alpha1_y = grad_Q_y[5];
     PetscReal u_x = irho*irho*(grad_Q_x[2]*rho - Q[2]*(grad_Q_x[0] + grad_Q_x[1]));
     PetscReal v_y = irho*irho*(grad_Q_y[3]*rho - Q[3]*(grad_Q_y[0] + grad_Q_y[1]));
-
-    K = 0.0;
 
     // Now find the fluxes
 
@@ -247,37 +246,40 @@ void PDEmatrixB(const PetscReal *Q, PetscReal nx, PetscReal ny, PetscReal B[nVar
 
 PetscBool PDECheckPAD(const PetscReal *Q) {
 
-    PetscBool PAD = PETSC_TRUE;
+    PetscReal alpha_1 = Q[5];
+    PetscReal alpha_2 = 1.0 - alpha_1;
 
-    PetscReal phi_1 = Q[5];
-    PetscReal phi_2 = 1.0 - phi_1;
+    PetscReal rho_1 = Q[0]/alpha_1;
+    PetscReal rho_2 = Q[1]/alpha_2;
 
-    PetscReal temp = phi_1/(GAMMA_1-1.0) + phi_2/(GAMMA_2 - 1.0);
-    PetscReal gamma = 1.0 + 1.0/temp;
-    PetscReal pi = (phi_1*GAMMA_1*PI_1/(GAMMA_1-1.0) + phi_2*GAMMA_2*PI_2/(GAMMA_2 - 1.0))/(1.0 + temp);
+    PetscReal rho     = Q[0] + Q[1];
+    PetscReal u       = Q[2]/rho;
+    PetscReal v       = Q[3]/rho;
+    PetscReal E       = Q[4];
+    PetscReal e       = E - 0.5*rho*(u*u+v*v);
+    PetscReal G1m1    = GAMMA_1-1.0;
+    PetscReal G2m1    = GAMMA_2-1.0;
+    PetscReal p       = (e*G1m1*G2m1 - alpha_1*GAMMA_1*PI_1*G2m1 - alpha_2*GAMMA_2*PI_2*G1m1)/(alpha_1*G2m1 + alpha_2*G1m1);
 
-    PetscReal rho = Q[0] + Q[1];
-    PetscReal irho = 1.0/rho;
-    PetscReal u = irho*Q[2];
-    PetscReal v = irho*Q[3];
-    PetscReal E = Q[4];
-    PetscReal p = (gamma - 1.0)*(E - 0.5*rho*(u*u + v*v)) - gamma*pi;
+    PetscReal a1_sq = GAMMA_1*(p+PI_1)/rho_1;
+    PetscReal a2_sq = GAMMA_2*(p+PI_2)/rho_2;
+    PetscReal a_sq = (rho_1*a1_sq*rho_2*a2_sq)/(rho*(alpha_2*rho_1*a1_sq + alpha_1*rho_2*a2_sq));
 
     // Check if the input state is physically admissible
 
     if (rho < rho_floor) {
-        PAD = PETSC_FALSE;
+        return PETSC_FALSE;
     }
 
-    if ((p + pi)  < prs_floor) {
-        PAD = PETSC_FALSE;
+    if (a_sq  < prs_floor) {
+        return PETSC_FALSE;
     }
 
-    if (phi_1 < 1.0e-4 || phi_1 > 1.0-1.0e-4) {
-        PAD = PETSC_FALSE;
+    if (alpha_1 < 1.0 || alpha_1 > 1.0) {
+        return PETSC_FALSE;
     }
 
-    return PAD;
+    return PETSC_TRUE;
 }
 
 //----------------------------------------------------------------------------
@@ -326,49 +328,44 @@ PetscReal PDEFluxPrim(const PetscReal *V,
                             const PetscReal x,  const PetscReal y,
                             PetscReal *F) {
 
-    PetscReal phi_1 = V[5];
-    PetscReal phi_2 = 1.0 - phi_1;
-
-    PetscReal temp = phi_1/(GAMMA_1-1.0) + phi_2/(GAMMA_2 - 1.0);
-    PetscReal gamma = 1.0 + 1.0/temp;
-    PetscReal pi = (phi_1*GAMMA_1*PI_1/(GAMMA_1-1.0) + phi_2*GAMMA_2*PI_2/(GAMMA_2 - 1.0))/(1.0 + temp);
+    PetscReal alpha_1 = V[5];
+    PetscReal alpha_2 = 1.0 - alpha_1;
 
     PetscReal rho_1 = V[0];
     PetscReal rho_2 = V[1];
-
-    PetscReal rho = phi_1*rho_1 + phi_2*rho_2;
-    PetscReal irho = 1.0/rho;
-    PetscReal u = V[2];
-    PetscReal v = V[3];
-    PetscReal p = V[4];
-    PetscReal E = (p + gamma*pi)/(gamma - 1.0) + 0.5*rho*(u*u + v*v);
+    PetscReal rho     = alpha_1*rho_1 + alpha_2*rho_2;
+    PetscReal u       = V[2];
+    PetscReal v       = V[3];
+    PetscReal p       = V[4];
+    PetscReal G1m1    = GAMMA_1-1.0;
+    PetscReal G2m1    = GAMMA_2-1.0;
+    PetscReal e       = (p*(alpha_1*G2m1 + alpha_2*G1m1) + alpha_1*GAMMA_1*PI_1*G2m1 + alpha_2*GAMMA_2*PI_2*G1m1)/(G1m1*G2m1);
+    PetscReal E = e + 0.5*rho*(u*u+v*v);
 
     PetscReal un = u*nx+v*ny;
 
+    PetscReal a1_sq = GAMMA_1*(p+PI_1)/rho_1;
+    PetscReal a2_sq = GAMMA_2*(p+PI_2)/rho_2;
+    PetscReal a_sq = (rho_1*a1_sq*rho_2*a2_sq)/(rho*(alpha_2*rho_1*a1_sq + alpha_1*rho_2*a2_sq));
+
     // Check if the input state is physically admissible
 
-    if (rho < rho_floor) {
-        printf("Negative density = %f\n", rho);
+    if (a_sq < prs_floor) {
+        printf("Negative square speed of sound = %f\n", a_sq);
         printf("At x = %f, y = %f\n", x, y);
         MPI_Abort(PETSC_COMM_WORLD, 1);
     }
 
-    if ( p + pi < prs_floor) {
-        printf("Negative pressure = %f\n", p + pi);
-        printf("At x = %f, y = %f\n", x, y);
-        MPI_Abort(PETSC_COMM_WORLD, 1);
-    }
-
-    F[0] = phi_1*rho_1*un;
-    F[1] = phi_2*rho_2*un;
-    F[2] = rho*u*un + nx*p;
-    F[3] = rho*v*un + ny*p;
-    F[4] = un*(E + p);
+    F[0] = alpha_1*rho_1*un;
+    F[1] = alpha_2*rho_2*un;
+    F[2] = rho*u*un + p*nx;
+    F[3] = rho*v*un + p*ny;
+    F[4] = (E+p)*un;
     F[5] = 0.0;
 
     // Obtain the maximum eigenvalue
 
-    PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(gamma*(p+pi)*irho);
+    PetscReal s_max = PetscAbsReal(un) + PetscSqrtReal(a_sq);
 
     return s_max;
 }
@@ -419,15 +416,14 @@ PetscReal PDEViscFluxPrim(const PetscReal* V, const PetscReal grad_V[nVar][DIM],
 
 void PDENCPPrim(const PetscReal *V, const PetscReal *grad_V_x, const PetscReal *grad_V_y, PetscReal *BgradQ) {
 
-    PetscReal phi_1 = V[5];
-    PetscReal phi_2 = 1.0 - phi_1;
+    PetscReal alpha_1 = V[5];
+    PetscReal alpha_2 = 1.0 - alpha_1;
 
     PetscReal rho_1 = V[0];
     PetscReal rho_2 = V[1];
-
-    PetscReal u = V[2];
-    PetscReal v = V[3];
-    PetscReal p = V[4];
+    PetscReal u       = V[2];
+    PetscReal v       = V[3];
+    PetscReal p       = V[4];
 
     PetscReal phi_x = grad_V_x[5]; PetscReal phi_y = grad_V_y[5];
     PetscReal u_x = grad_V_x[2];
@@ -435,9 +431,7 @@ void PDENCPPrim(const PetscReal *V, const PetscReal *grad_V_x, const PetscReal *
 
     PetscReal a_1_sq = GAMMA_1*(p + PI_1)/rho_1;
     PetscReal a_2_sq = GAMMA_2*(p + PI_2)/rho_2;
-    PetscReal K = (phi_1*phi_2*(rho_2*a_2_sq - rho_1*a_1_sq))/(phi_1*rho_2*a_2_sq + phi_2*rho_1*a_1_sq);
-
-    K = 0.0;
+    PetscReal K = (alpha_1*alpha_2*(rho_2*a_2_sq - rho_1*a_1_sq))/(alpha_1*rho_2*a_2_sq + alpha_2*rho_1*a_1_sq);
 
     // Find the Non-Conservative product
 
@@ -455,36 +449,33 @@ void PDENCPPrim(const PetscReal *V, const PetscReal *grad_V_x, const PetscReal *
 
 PetscBool PDECheckPADPrim(const PetscReal *V) {
 
-    PetscBool PAD = PETSC_TRUE;
-
-    PetscReal phi_1 = V[5];
-    PetscReal phi_2 = 1.0 - phi_1;
-
-    PetscReal temp = phi_1/(GAMMA_1-1.0) + phi_2/(GAMMA_2 - 1.0);
-    PetscReal pi = (phi_1*GAMMA_1*PI_1/(GAMMA_1-1.0) + phi_2*GAMMA_2*PI_2/(GAMMA_2 - 1.0))/(1.0 + temp);
+    PetscReal alpha_1 = V[5];
+    PetscReal alpha_2 = 1.0 - alpha_1;
 
     PetscReal rho_1 = V[0];
     PetscReal rho_2 = V[1];
+    PetscReal rho   = alpha_1*rho_1 + alpha_2*rho_2;
+    PetscReal p     = V[4];
 
-    PetscReal rho = phi_1*rho_1 + phi_2*rho_2;
-    PetscReal p = V[4];
+    PetscReal a1_sq = GAMMA_1*(p+PI_1)/rho_1;
+    PetscReal a2_sq = GAMMA_2*(p+PI_2)/rho_2;
+    PetscReal a_sq = (rho_1*a1_sq*rho_2*a2_sq)/(rho*(alpha_2*rho_1*a1_sq + alpha_1*rho_2*a2_sq));
 
     // Check if the input state is physically admissible
 
-
     if (rho < rho_floor) {
-        PAD = PETSC_FALSE;
+        return PETSC_FALSE;
     }
 
-    if ((p + pi)  < prs_floor) {
-        PAD = PETSC_FALSE;
+    if (a_sq  < prs_floor) {
+        return PETSC_FALSE;
     }
 
-    if (phi_1 < 0.0 || phi_1 > 1.0) {
-        PAD = PETSC_FALSE;
+    if (alpha_1 < 0.0 || alpha_1 > 1.0) {
+        return PETSC_FALSE;
     }
 
-    return PAD;
+    return PETSC_TRUE;
 }
 
 //----------------------------------------------------------------------------
@@ -533,7 +524,7 @@ void InletBCPrim(PetscReal x, PetscReal y, PetscReal t, PetscReal* V) {
 // GAMMA_1 = 4.0; GAMMA_2 = 1.4; PI_1 = 20.0; PI_2 = 0.0
 //----------------------------------------------------------------------------
 
-void smoothVortex_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void SmoothVortex(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
@@ -578,7 +569,7 @@ void smoothVortex_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
 // GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6.0e8; PI_2 = 0.0
 //----------------------------------------------------------------------------
 
-void interface_advection_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void InterfaceAdvection(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
@@ -609,13 +600,14 @@ void interface_advection_kp5(PetscReal x, PetscReal y, PetscReal* Q0) {
 // [x,y] \in [0.0,0.356] x [0.0,0.089]
 // Final Time: 674.0e-6
 // BC: L-T, R-T, B-R, T-R
-// GAMMA_1 = 1.4; GAMMA_2 = 1.648; PI_1 = 0.0; PI_2 = 0.0
+// g1 = 1.4; g2 = 1.648; p1 = 0.0; g1 = 0.0
 //----------------------------------------------------------------------------
 
-void AirHelium_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void AirHelium(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
+    PetscReal eps = 1.0e-5;
     PetscReal x0 = 0.245, y0 = 0.0455, R = 0.025;
 
     // (Air) Shock
@@ -626,7 +618,7 @@ void AirHelium_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[2] = -114.42;
         V0[3] = 0.0;
         V0[4] = 1.56980e5;
-        V0[5] = 1.0-1.0e-6;
+        V0[5] = 1.0-eps;
     }
 
     else {
@@ -635,18 +627,179 @@ void AirHelium_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
         V0[2] = 0.0;
         V0[3] = 0.0;
         V0[4] = 1.0e5;
-        V0[5] = 1.0-1.0e-6;
+        V0[5] = 1.0-eps;
     }
 
     // (Helium) Bubble
 
     if ((x-x0)*(x-x0) + (y-y0)*(y-y0) <= R*R) {
+
         V0[0] = 1.4;
         V0[1] = 0.25463;
         V0[2] = 0.0;
         V0[3] = 0.0;
         V0[4] = 1.0e5;
-        V0[5] = 1.0e-6;
+        V0[5] = eps;
+    }
+
+    PDEPrim2Cons(V0, Q0);
+}
+
+//----------------------------------------------------------------------------
+// Air R22-Bubble Shock Interaction
+// [x,y] \in [0.0,0.356] x [0.0,0.089]
+// Final Time: 417.0e-6
+// BC: L-T, R-T, B-R, T-R
+// g1 = 1.4; g2 = 1.249; p1 = 0.0; g1 = 0.0
+//----------------------------------------------------------------------------
+
+void AirR22(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    PetscReal eps = 1.0e-5;
+    PetscReal x0 = 0.245, y0 = 0.0455, R = 0.025;
+
+    // (Air) Shock
+
+    if (x >= 0.275) {
+        V0[0] = 1.92691;
+        V0[1] = 4.41540;
+        V0[2] = -114.42;
+        V0[3] = 0.0;
+        V0[4] = 1.56980e5;
+        V0[5] = 1.0-eps;
+    }
+
+    else {
+        V0[0] = 1.4;
+        V0[1] = 4.41540;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.0e5;
+        V0[5] = 1.0-eps;
+    }
+
+    // (R22) Bubble
+
+    if ((x-x0)*(x-x0) + (y-y0)*(y-y0) <= R*R) {
+        V0[0] = 1.4;
+        V0[1] = 4.41540;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.0e5;
+        V0[5] = eps;
+    }
+
+    PDEPrim2Cons(V0, Q0);
+}
+
+//----------------------------------------------------------------------------
+// Single Mode Richtmyer-Meshkov Instability
+// [x,y] \in [0,4] x [-0.5,0.5]
+// Final Time: 7.82
+// BC: L-T, R-T, B-T, T-T
+// GAMMA_1 = 1.4; GAMMA_2 = 1.093; PI_1 = 0.0; PI_2 = 0.0
+//----------------------------------------------------------------------------
+
+void RichtmyerMeshkov(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    PetscReal eps = 1.0e-5;
+    PetscReal xs = 2.9 + 0.1*PetscSinReal(2.0*PETSC_PI*(y + 0.25 ));
+
+    // (Water) Shock
+
+    if (x <= xs) {
+
+        V0[0] = 1.0;
+        V0[1] = 5.0;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.0/1.4;
+        V0[5] = eps;
+    }
+
+    else if (x > xs && x <= 3.2) {
+        V0[0] = 1.0;
+        V0[1] = 5.0;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.0/1.4;
+        V0[5] = 1.0 - eps;
+    }
+
+    else {
+        V0[0] = 1.4112;
+        V0[1] = 5.0;
+        V0[2] = -0.3613;
+        V0[3] = 0.0;
+        V0[4] = 1.6272/1.4;
+        V0[5] = 1.0 - eps;
+    }
+
+    PDEPrim2Cons(V0, Q0);
+}
+
+//----------------------------------------------------------------------------
+// Under-Water Explosion
+// [x,y] \in [-2,2] x [-1.5,1.5]
+// Final Time: 0.05
+// BC: L-T, R-T, B-R, T-T
+// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_1 = 0.0
+//----------------------------------------------------------------------------
+
+void UnderWaterExplosion(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+    PetscReal eps = 1.0e-5;
+
+    // Air part
+
+    if (y >= 0.0) {
+
+        // Air (Free surface)
+
+        V0[0] = 1.0;
+        V0[1] = 1.225e-03;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.01325;
+        V0[5] = eps;
+    }
+
+    else {
+
+        // Water
+
+        V0[0] = 1.0;
+        V0[1] = 1.225e-03;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.01325;
+        V0[5] = 1.0-eps;
+    }
+
+    // Air bubble inside water
+
+    PetscReal x_0 = 0.0; PetscReal y_0 = -0.3;
+    PetscReal r = 0.12;
+
+    if ((x-x_0)*(x-x_0) + (y-y_0)*(y-y_0) <= r*r ) {
+
+        V0[0] = 1.0;
+        V0[1] = 1.25;
+        V0[2] = 0.0;
+        V0[3] = 0.0;
+        V0[4] = 1.0e4;
+        V0[5] = eps;
+    }
+
+    //V0[5] = TanhRadial(x,y, 0.0, -0.3, r, 2.0*2.0/400.0, eps, 1.0-eps);
+
+    if (y >= 0) {
+        V0[5] = eps;
     }
 
     PDEPrim2Cons(V0, Q0);
@@ -654,38 +807,89 @@ void AirHelium_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
 
 
 //----------------------------------------------------------------------------
-// Shock in water hitting air coloumn
-// [x,y] \in [0,10] x [-2.5,2.5]
-// Final Time: 0.02
+// Mach 2.4 Shock in air hitting water cylinder
+// [x,y] \in [0,0.12] x [-0.04,0.04]
+// Final Time: 70.0e-6
 // BC: L-T, R-T, B-T, T-T
-// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_2 = 0.0
+// GAMMA_1 = 6.12; GAMMA_2 = 1.4; PI_1 = 3.43e8; PI_2 = 0.0
 //----------------------------------------------------------------------------
 
-void WaterAir_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void WaterCylinder(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
-    PetscReal x0 = 4.375; PetscReal y0 = 0.0;
-    PetscReal R = 1.0;
+    const PetscReal x0 = 0.04; const PetscReal y0 = 0.0;
+    const PetscReal R0 = 1.1e-2; const PetscReal eps = 1.0e-5;
+
+    if (x < 0.028) {
+
+        V0[0] = 1.0;
+        V0[1] = 3.7579;
+        V0[2] = 574.57;
+        V0[3] = 0.0;
+        V0[4] = 6.6189e5;
+        V0[5] = eps;
+    }
+
+    // Shock
+
+    else {
+        V0[0] = 1.0;
+        V0[1] = 1.17;
+        V0[2] = 0.0;;
+        V0[3] = 0.0;
+        V0[4] = 1.01e5;
+        V0[5] = eps;
+    }
+
+    // Water Cylinder
+
+    if ((x-x0)*(x-x0) + (y-y0)*(y-y0) < R0*R0) {
+
+        V0[0] = 1000.0;
+        V0[1] = 1.0;
+        V0[2] = 0.0;;
+        V0[3] = 0.0;
+        V0[4] = 1.01e5;
+        V0[5] = 1.0-eps;
+    }
+    PDEPrim2Cons(V0, Q0);
+}
+
+//----------------------------------------------------------------------------
+// Mach 1.72 Shock in water hitting air coloumn
+// [x,y] \in [0,12] x [0,12]
+// Final Time: 0.045
+// BC: L-T, R-T, B-R, T-R
+// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_1 = 0.0
+//----------------------------------------------------------------------------
+
+void AirCavity(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal V0[nVar];
+
+    const PetscReal x0 = 6.0; const PetscReal y0 = 6.0;
+    const PetscReal R = 3.0; const PetscReal eps = 1.0e-5;
 
     // (Water) Shock
 
-    if (x < 1.0) {
+    if (x > 11.4) {
+
         V0[0] = 1.325;
-        V0[1] = 0.001;
-        V0[2] = 68.52;
+        V0[1] = 0.0012;
+        V0[2] = -68.525;
         V0[3] = 0.0;
-        V0[4] = 1.915e4;
-        V0[5] = 1.0-1.0e-6;
+        V0[4] = 19153.0;
+        V0[5] = 1.0-eps;
     }
 
     else {
         V0[0] = 1.0;
-        V0[1] = 0.001;
-        V0[2] = 0.0;
+        V0[1] = 0.0012;
+        V0[2] = 0.0;;
         V0[3] = 0.0;
         V0[4] = 1.0;
-        V0[5] = 1.0-1.0e-6;
+        V0[5] = 1.0-eps;
     }
 
     // (Air) Bubble
@@ -693,85 +897,100 @@ void WaterAir_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
     if ((x-x0)*(x-x0) + (y-y0)*(y-y0) < R*R) {
 
         V0[0] = 1.0;
-        V0[1] = 0.001;
-        V0[2] = 0.0;
+        V0[1] = 0.0012;
+        V0[2] = 0.0;;
         V0[3] = 0.0;
         V0[4] = 1.0;
-        V0[5] = 1.0e-6;
+        V0[5] = eps;
     }
 
     PDEPrim2Cons(V0, Q0);
 }
 
 //----------------------------------------------------------------------------
-// Mach 6 Shock in air hitting water cylinder
-// [x,y] \in [0,8] x [-1,1]
-// Final Time: 0.896
-// BC: L-T, R-T, B-R, T-R
+// Bubble Collapse Near Wall
+// [x,y] \in [0,10] x [-2.5,2.5]
+// Final Time: 0.02
+// BC: L-R, R-T, B-T, T-T
 // g1 = 4.4; g2 = 1.4; p1 = 6000.0; g1 = 0.0
 //----------------------------------------------------------------------------
 
-void WaterCylinder_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void BubbleCollapse(PetscReal x, PetscReal y, PetscReal* Q0) {
 
     PetscReal V0[nVar];
 
-    const PetscReal x0 = 2.0; const PetscReal y0 = 0.0;
-    const PetscReal R = 0.562; const PetscReal eps = 1.0e-2;
+    PetscReal R0 = 1.0;
+    PetscReal x0 = 0.0; const PetscReal y0 = 0.0;
+    PetscReal R = PetscSqrtReal((x-x0)*(x-x0) + (y-y0)*(y-y0));
 
-    // Shock
+    // Inside the bubble
+    PetscReal rhoi   = 1.0e-2;
+    PetscReal pi     = 1.0;
+    PetscReal alphai = 1.0e-5;
 
-    if (x < 1.0) {
+    // Outside the bubble
+    PetscReal rhoo   = 1.0;
+    PetscReal po     = 100.0;
+    PetscReal alphao = 1.0 - 1.0e-5;
 
-        V0[0] = 1000.0;
-        V0[1] = 5.26829;
-        V0[2] = 5.79;
-        V0[3] = 0.0;
-        V0[4] = 42.39;
-        V0[5] = eps;
-    }
+    PetscReal h = 10.0/500.0;
+    PetscReal smear = 3.0;
 
-    else {
-        V0[0] = 1000.0;
-        V0[1] = 1.0;
-        V0[2] = 0.0;;
-        V0[3] = 0.0;
-        V0[4] = 1.013;
-        V0[5] = eps;
-    }
-
-    // Water Cylinder
-
-    if ((x-x0)*(x-x0) + (y-y0)*(y-y0) < R*R) {
-
-        V0[0] = 1000.0;
-        V0[1] = 1.0;
-        V0[2] = 0.0;;
-        V0[3] = 0.0;
-        V0[4] = 1.013;
-        V0[5] = 1.0-eps;
-    }
+    V0[0] = rhoo;//0.5*((rhoi+rhoo) + (rhoo-rhoi)*PetscTanhReal((R-R0)/(smear*h)));
+    V0[1] = rhoi;
+    V0[2] = 0.0;
+    V0[3] = 0.0;
+    V0[4] = 0.5*((pi+po) + (po-pi)*PetscTanhReal((R-R0)/(smear*h)));
+    V0[5] = 0.5*((alphai+alphao) + (alphao-alphai)*PetscTanhReal((R-R0)/(smear*h)));
 
     PDEPrim2Cons(V0, Q0);
 }
 
 //----------------------------------------------------------------------------
-// Air-Jet Entering water reservoir
+// Air jet in water
 // [x,y] \in [0,30] x [-15,15]
-// Final Time: 1000.0
+// Final Time:1000
 // BC: L-I, R-T, B-R, T-R
-// GAMMA_1 = 4.4; GAMMA_2 = 1.4; PI_1 = 6000.0; PI_2 = 0.0
+// g1 = 4.4; g2 = 1.4; p1 = 6000.0; g1 = 0.0
 //----------------------------------------------------------------------------
 
-void AirJet_KP5(PetscReal x, PetscReal y, PetscReal* Q0) {
+void AirJet(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal eps = 1.0e-5;
 
     PetscReal V0[nVar];
 
-    V0[0] = 1000.0;
+    V0[0] = 997.0;
+    V0[1] = 1.225;
+    V0[2]  = 0.0;
+    V0[3]  = 0.0;
+    V0[4]  = 1.013e5;
+    V0[5]  = 1.0 - eps;
+
+    PDEPrim2Cons(V0, Q0);
+}
+
+
+//----------------------------------------------------------------------------
+// Water jet in air
+// [x,y] \in [0,L] x [-0.25L,0.25L], L = 1
+// Final Time:6.0e-6
+// BC: L-I, R-T, B-T, T-T
+// GAMMA_1 = 6.12; GAMMA_2 = 1.4; PI_1 = 3.43e8; PI_2 = 0.0
+//----------------------------------------------------------------------------
+
+void WaterJet(PetscReal x, PetscReal y, PetscReal* Q0) {
+
+    PetscReal eps = 1.0e-5;
+
+    PetscReal V0[nVar];
+
+    V0[0] = 1.0;
     V0[1] = 1.0;
-    V0[2] = 0.0;
-    V0[3] = 0.0;
-    V0[4] = 1.013;
-    V0[5] = 1.0 - 1.0e-6;
+    V0[2]  = 0.0;
+    V0[3]  = 0.0;
+    V0[4]  = 1.0e5;
+    V0[5]  = eps;
 
     PDEPrim2Cons(V0, Q0);
 }

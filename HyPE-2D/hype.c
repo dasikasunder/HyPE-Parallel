@@ -29,24 +29,24 @@ int main(int argc,char **argv) {
 
     AppCtx Ctx; 
 
-    Ctx.N               = 2;
-    Ctx.x_min           = -3.0;
-    Ctx.x_max           =  3.0;
-    Ctx.y_min           = -3.0;
-    Ctx.y_max           =  3.0;
-    Ctx.N_x             =  256;
-    Ctx.N_y             =  256;
+    Ctx.N               = 1;
+    Ctx.x_min           = 0.0;
+    Ctx.x_max           =  12.0;
+    Ctx.y_min           = 0.0;
+    Ctx.y_max           = 12.0;
+    Ctx.N_x             = 128;
+    Ctx.N_y             = 128;
     Ctx.CFL             = 0.9;                            
     Ctx.InitialStep     = 0;
     Ctx.InitialTime     = 0.0;
-    Ctx.FinalTime       = 6.0;
+    Ctx.FinalTime       = 0.045;
     Ctx.WriteInterval   = 1000;
     Ctx.RestartInterval = 1000;
-    Ctx.ReconsPrimitive = PETSC_FALSE;
-    Ctx.LeftBoundary    = periodic;
-    Ctx.RightBoundary   = periodic;
-    Ctx.BottomBoundary  = periodic;
-    Ctx.TopBoundary     = periodic;
+    Ctx.ReconsPrimitive = PETSC_TRUE;
+    Ctx.LeftBoundary    = transmissive;
+    Ctx.RightBoundary   = transmissive;
+    Ctx.BottomBoundary  = reflective;
+    Ctx.TopBoundary     = reflective;
     Ctx.Restart         = PETSC_FALSE; 
 
     //--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

@@ -54,6 +54,7 @@ PetscReal RiemannSolver(const PetscReal *QL, const PetscReal *QR,
                            const PetscReal x,  const PetscReal y,
                            PetscReal *F, PetscReal *D) {
 
+    /*
     int i, j, c;
     PetscReal FL[nVar], FR[nVar], Q_jump[nVar];
     PetscReal B[nVar][nVar];
@@ -80,6 +81,25 @@ PetscReal RiemannSolver(const PetscReal *QL, const PetscReal *QR,
             D[i] += B[i][j]*Q_jump[j];
         }
     }
+    */
+
+    PetscInt c;
+    PetscReal FL[nVar], FR[nVar], grad_Q_x[nVar], grad_Q_y[nVar];
+    PetscReal Q_av[nVar];
+
+    PetscReal s_max_l = PDEFlux(QL, nx, ny, x, y, FL);
+    PetscReal s_max_r = PDEFlux(QR, nx, ny, x, y, FR);
+
+    PetscReal s_max = PetscMax(s_max_l, s_max_r);
+
+    for (c = 0; c < nVar; ++c) {
+        Q_av[c] = 0.5*(QR[c]+QL[c]);
+        grad_Q_x[c] = nx*(QR[c]-QL[c]);
+        grad_Q_y[c] = ny*(QR[c]-QL[c]);
+        F[c] = 0.5*( FR[c] + FL[c] - s_max*(QR[c]-QL[c]) );
+    }
+
+    PDENCP(Q_av, grad_Q_x, grad_Q_y, D);
 
     return s_max;
 }

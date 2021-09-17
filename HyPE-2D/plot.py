@@ -18,6 +18,7 @@ def plotMatPlotLib(Name,fileName,fieldNames, fieldTypes, X, Y, sol):
     IMAX = sol.shape[1]
     nVar = sol.shape[2]
 
+
     im_ratio = IMAX/JMAX # Reverse to get better size
 
     slice_interval = 10 # Increase for lesser arrow plots
@@ -223,7 +224,9 @@ def fiveEqnModel(fileName):
     sol[:,:,2] = sol_raw[:,:,3]
     sol[:,:,3] = sol_raw[:,:,4]
     sol[:,:,4] = sol_raw[:,:,5]
-    sol[:,:,5] = calcGrad(sol[:,:,0])
+    grad = calcGrad(sol[:,:,0])
+    max_grad = np.amax(grad) + 1.0e-12
+    sol[:,:,5] = np.log(1.0 + grad/max_grad)
     return Name, fieldNames, fieldTypes, X, Y, sol
 
 ##################################################################################################################################
@@ -250,7 +253,7 @@ for fileName in os.listdir('.'):
     if fileName.endswith('.vts'):
         print(fileName)
         Name, fieldNames, fieldTypes, X, Y, sol = fiveEqnModel(fileName)
-        plotMatPlotLib(Name, fileName,fieldNames, fieldTypes, X, Y, sol)
+        plotVTK(Name, fileName,fieldNames, fieldTypes, X, Y, sol)
 
 ##################################################################################################################################
 
